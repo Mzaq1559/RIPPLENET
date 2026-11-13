@@ -234,7 +234,7 @@ export function AgentReasoningCard({
           },
           thinking: {
             actionTitle: "Calculating Per-Person Estimate",
-            description: `Estimated cost for ${pipeline.needs?.length ?? 0} listed need(s) is not itemized; current estimate is based on placeholder unit prices.`,
+            description: "The current estimate uses placeholder unit prices; budget efficiency and duplicate-aid waste are not assessed.",
             terminalLog: "[RESOURCE-02] 🧠 THINKING: Budget efficiency and duplicate-aid waste are not assessed.",
           },
           working: {
