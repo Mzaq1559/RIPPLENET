@@ -30,7 +30,7 @@ import { fetchRoute } from "../../../lib/osrm";
 import { haversineKm } from "../../../lib/geo";
 import { mergeCamps, getMockRequestsForCamp, type CampRecord } from "../../../lib/camps";
 import { AgentReasoningCard } from "../../components/agent-reasoning-card";
-import { runMultiAgentPipeline } from "../../../lib/agents";
+import { runMultiAgentPipeline, type StockSnapshotItem } from "../../../lib/agents";
 import { fetchRainfall } from "../../../lib/weather";
 import { displayPriority, formatFullDate, parseNeeds, suggestParcel } from "../../../lib/needs";
 
@@ -266,6 +266,22 @@ export default async function RequestDetailsPage(props: { params: Promise<{ id: 
 
   const symptomItems = needs.slice(0, 4);
 
+  let stock: StockSnapshotItem[] | null = null;
+  if (camp?.id) {
+    try {
+      const stockRows = await prisma.stockItem.findMany({ where: { campId: camp.id } });
+      stock = stockRows.map((row) => ({
+        name: row.name,
+        quantity: row.quantity,
+        unit: row.unit,
+        reorderLevel: row.reorderLevel,
+      }));
+    } catch (error) {
+      console.warn("Could not load camp stock:", error);
+      stock = null;
+    }
+  }
+
   const pipeline = runMultiAgentPipeline({
     requestId: request.code,
     citizenName: request.citizenName,
@@ -285,6 +301,7 @@ export default async function RequestDetailsPage(props: { params: Promise<{ id: 
     rainfall7d: liveRainfall.last7dMm,
     currentRainfallRate: liveRainfall.currentMmH,
     weatherSource: liveRainfall.source,
+    stock,
   });
 
   return (
