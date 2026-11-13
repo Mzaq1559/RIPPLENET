@@ -14,8 +14,6 @@ export function AdminLoginForm() {
   const [email, setEmail] = useState("admin@alkhidmat.org");
   const [password, setPassword] = useState("admin2025");
 
-  // Signup inputs
-
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
