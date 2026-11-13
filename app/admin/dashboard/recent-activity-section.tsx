@@ -246,7 +246,7 @@ export function RecentActivitySection({ initialActivities }: RecentActivitySecti
                           {item.title}
                         </span>
                         <span
-                          className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold ${config.badge}`}
+                          className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold transition-colors duration-300 motion-reduce:transition-none ${config.badge}`}
                         >
                           {config.label}
                         </span>

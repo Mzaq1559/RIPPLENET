@@ -4,6 +4,7 @@ import { CitizenHeader } from "../components/citizen-header";
 import { CitizenNav } from "../components/citizen-nav";
 import { LanguageProvider } from "../components/language-context";
 import { Translated } from "../components/citizen-translated";
+import { RevealOnScroll } from "../components/reveal-on-scroll";
 import { SosChannelsClient } from "./sos-channels-client";
 
 export const metadata: Metadata = {
@@ -17,18 +18,18 @@ export default function SosPage() {
         <CitizenHeader />
 
         <main className="pb-[110px]">
-          <section className="px-5 pt-6">
+          <RevealOnScroll className="px-5 pt-6" trigger="mount">
             <Translated
               k="needHelp"
               as="h1"
               className="font-display text-[28px] font-extrabold leading-[1.15] tracking-tight text-ink"
             />
             <Translated k="hereForYou" as="p" className="mt-1.5 text-[14px] font-medium text-slate-500" />
-          </section>
+          </RevealOnScroll>
 
           <SosChannelsClient />
 
-          <section className="mt-4 px-5">
+          <RevealOnScroll className="mt-4 px-5">
             <div className="flex items-center gap-3 rounded-2xl bg-sky-50 p-3.5">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-channel shadow-sm">
                 <IconShieldPin className="h-[22px] w-[22px]" />
@@ -38,7 +39,7 @@ export default function SosPage() {
                 <Translated k="dataPrivacy" as="p" className="mt-1 text-[11px] text-slate-500" />
               </div>
             </div>
-          </section>
+          </RevealOnScroll>
         </main>
 
         <CitizenNav active="home" />

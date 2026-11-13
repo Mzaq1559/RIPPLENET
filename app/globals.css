@@ -74,3 +74,113 @@ body {
 .animate-emergency-video {
   animation: emergency-video-pan 10s ease-in-out infinite alternate;
 }
+
+.relief-orbit-fallback {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  perspective: 700px;
+  transform-style: preserve-3d;
+}
+
+.relief-orbit-fallback::before,
+.relief-orbit-fallback::after {
+  position: absolute;
+  inset: 25%;
+  border: 1px solid rgb(6 182 212 / 32%);
+  border-radius: 9999px;
+  content: "";
+}
+
+.relief-orbit-fallback::before {
+  background: radial-gradient(circle at 35% 30%, rgb(34 211 238 / 65%), rgb(14 90 138 / 10%) 68%);
+  box-shadow: 0 0 35px rgb(6 182 212 / 20%);
+  transform: translateZ(18px);
+}
+
+.relief-orbit-fallback::after {
+  inset: 18%;
+  border-color: rgb(14 90 138 / 20%);
+  transform: rotateX(68deg) rotateZ(-24deg);
+}
+
+.relief-orbit {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform-style: preserve-3d;
+}
+
+.relief-orbit__ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 68%;
+  aspect-ratio: 1;
+  border: 1px solid rgb(6 182 212 / 50%);
+  border-radius: 50%;
+  box-shadow: 0 0 16px rgb(6 182 212 / 12%);
+  transform-style: preserve-3d;
+}
+
+.relief-orbit__ring--wide {
+  animation: relief-orbit-spin-wide 24s linear infinite;
+}
+
+.relief-orbit__ring--tilted {
+  width: 78%;
+  border-color: rgb(14 90 138 / 30%);
+  animation: relief-orbit-spin-tilted 30s linear infinite;
+}
+
+.relief-orbit__ring--vertical {
+  width: 56%;
+  border-color: rgb(34 211 238 / 30%);
+  animation: relief-orbit-spin-vertical 20s linear infinite;
+}
+
+.relief-orbit__core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 22%;
+  aspect-ratio: 1;
+  border: 1px solid rgb(255 255 255 / 70%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #cffafe, #22d3ee 45%, #0e5a8a);
+  box-shadow: 0 0 28px rgb(6 182 212 / 45%);
+  transform: translate3d(-50%, -50%, 22px);
+}
+
+@keyframes relief-orbit-spin-wide {
+  from {
+    transform: translate(-50%, -50%) rotateX(68deg) rotateZ(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotateX(68deg) rotateZ(360deg);
+  }
+}
+
+@keyframes relief-orbit-spin-tilted {
+  from {
+    transform: translate(-50%, -50%) rotateX(55deg) rotateY(24deg) rotateZ(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotateX(55deg) rotateY(24deg) rotateZ(-360deg);
+  }
+}
+
+@keyframes relief-orbit-spin-vertical {
+  from {
+    transform: translate(-50%, -50%) rotateY(62deg) rotateZ(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotateY(62deg) rotateZ(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .relief-orbit__ring {
+    animation: none;
+  }
+}
