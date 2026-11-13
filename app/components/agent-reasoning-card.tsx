@@ -181,7 +181,7 @@ export function AgentReasoningCard({
         roleSubtitle: "OSRM Route Data & Unverified Road Passability",
         badgeLabel: routeAgent.routeFound
           ? routeAgent.durationMin !== null ? `${routeAgent.durationMin} Min ETA` : `${routeAgent.distanceKm} km`
-          : "Route unavailable",
+          : "Route data unavailable",
         icon: IconRouteAgent,
         themeColor: {
           bg: "bg-violet-50",
