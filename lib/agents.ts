@@ -299,7 +299,7 @@ export function runMultiAgentPipeline(params: {
   const baseParcel = suggestParcel(needs, params.type);
   const stockProvided = params.stock !== undefined && params.stock !== null;
   const allocatedItems: LogisticsAgentResult["allocatedItems"] = baseParcel.map((item) => {
-    const needed = Number(item.qty.match(/^\\s*(\\d+)/)?.[1] ?? 1);
+    const needed = Number(item.qty.match(/^\s*(\d+)/)?.[1] ?? 1);
     const matchingRows = params.stock?.filter(
       (row) => row.name.trim().toLowerCase() === item.name.trim().toLowerCase()
     ) ?? [];
