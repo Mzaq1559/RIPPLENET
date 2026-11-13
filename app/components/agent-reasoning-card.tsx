@@ -141,7 +141,7 @@ export function AgentReasoningCard({
       logistics: {
         type: "logistics",
         title: "Logistics Agent",
-        roleSubtitle: "Warehouse Stock Verification & Emergency Parcel Packaging",
+        roleSubtitle: "Camp Stock Check & Emergency Parcel Packaging",
         badgeLabel: `${logisticsAgent.allocatedItems.length} Items`,
         icon: IconLogisticsAgent,
         themeColor: {
