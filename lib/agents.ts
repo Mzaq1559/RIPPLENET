@@ -41,10 +41,24 @@ export interface HealthAgentResult {
   verdict: string;
 }
 
+export interface StockSnapshotItem {
+  name: string;
+  quantity: number;
+  unit: string;
+  reorderLevel: number;
+}
+
 export interface LogisticsAgentResult {
   agentName: "Logistics Agent";
   role: "Allocates relief parcels & medical stock against warehouse ceiling";
-  allocatedItems: { name: string; qty: string; category: string }[];
+  allocatedItems: {
+    name: string;
+    qty: string;
+    category: string;
+    stockStatus?: "in_stock" | "short" | "not_tracked" | "unchecked";
+    needed?: number;
+    available?: number;
+  }[];
   stockCeilingVerified: boolean;
   stockAlert: string | null;
   autoRestockTriggered: boolean;
@@ -123,6 +137,7 @@ export function runMultiAgentPipeline(params: {
   rainfall7d?: number;
   currentRainfallRate?: number;
   weatherSource?: string;
+  stock?: StockSnapshotItem[] | null;
 }): MultiAgentPipelineResult {
   const needs = params.needs;
   const needsJoined = needs.join(" ").toLowerCase();
@@ -282,47 +297,85 @@ export function runMultiAgentPipeline(params: {
 
   // 3. 📦 Logistics Agent
   const baseParcel = suggestParcel(needs, params.type);
-  const allocatedItems: LogisticsAgentResult["allocatedItems"] = baseParcel.map((item) => ({
-    name: item.name,
-    qty: item.qty,
-    category: "Standard",
-  }));
+  const stockProvided = params.stock !== undefined && params.stock !== null;
+  const allocatedItems: LogisticsAgentResult["allocatedItems"] = baseParcel.map((item) => {
+    const needed = Number(item.qty.match(/^\\s*(\\d+)/)?.[1] ?? 1);
+    const matchingRows = params.stock?.filter(
+      (row) => row.name.trim().toLowerCase() === item.name.trim().toLowerCase()
+    ) ?? [];
+    const available = matchingRows.reduce((total, row) => total + row.quantity, 0);
+    const stockStatus = !stockProvided
+      ? "unchecked"
+      : matchingRows.length === 0
+        ? "not_tracked"
+        : available >= needed
+          ? "in_stock"
+          : "short";
+
+    return {
+      name: item.name,
+      qty: item.qty,
+      category: "Standard",
+      stockStatus,
+      needed,
+      ...(stockProvided ? { available } : {}),
+    };
+  });
+  const stockCeilingVerified = stockProvided && allocatedItems.length > 0 &&
+    allocatedItems.every((item) => item.stockStatus === "in_stock");
+  const confirmedItems = allocatedItems.filter((item) => item.stockStatus === "in_stock");
+  const shortItems = allocatedItems.filter((item) => item.stockStatus === "short");
+  const untrackedItems = allocatedItems.filter((item) => item.stockStatus === "not_tracked");
+  const stockAlert = stockCeilingVerified
+    ? null
+    : !stockProvided
+      ? "Stock was not checked for this request."
+      : [
+          confirmedItems.length ? `Confirmed in stock: ${confirmedItems.map((item) => item.name).join(", ")}` : "",
+          shortItems.length ? `Short: ${shortItems.map((item) => `${item.name} (need ${item.needed}, have ${item.available})`).join(", ")}` : "",
+          untrackedItems.length ? `Not tracked at this camp: ${untrackedItems.map((item) => item.name).join(", ")}` : "",
+          allocatedItems.length === 0 ? "No parcel items were available to verify" : "",
+        ].filter(Boolean).join("; ") + ".";
 
   const logisticsThoughts: AgentThought[] = [
     {
       step: 1,
       agent: "logistics",
-      title: "Live Inventory & Stock Ceiling Verification",
-      detail: `Checking ${params.campName ?? "Alkhidmat Camp"} warehouse stock. Stock ceiling verified for ${allocatedItems.length} relief line items.`,
+      title: "Camp Inventory Check",
+      detail: stockProvided
+        ? `Checked ${params.campName ?? "Alkhidmat Camp"} stock for ${allocatedItems.length} parcel items. ${stockCeilingVerified ? "Every item is available in the required quantity." : stockAlert}`
+        : "Camp stock was not available to check; no inventory verification was performed.",
       timestamp: timeStr,
     },
     {
       step: 2,
       agent: "logistics",
       title: "Emergency Relief Parcel Allocation",
-      detail: `Allocated ${allocatedItems.length} essential relief supplies tailored to citizen distress signal.`,
+      detail: `Prepared ${allocatedItems.length} parcel items from the citizen distress signal. ${confirmedItems.length} confirmed in stock, ${shortItems.length} short, ${untrackedItems.length} not tracked, ${allocatedItems.filter((item) => item.stockStatus === "unchecked").length} unchecked.`,
       timestamp: timeStr,
     },
     {
       step: 3,
       agent: "logistics",
       title: "Volunteer Matching & Packaging",
-      detail: `Matched volunteer (${params.volunteerName ?? "Nearest Available"}). Packed into ${Math.ceil(people / 3)} waterproof crate(s).`,
+      detail: `Matched volunteer (${params.volunteerName ?? "Nearest Available"}). Prepared ${Math.ceil(people / 3)} waterproof crate(s); stock reservation is not performed by this check.`,
       timestamp: timeStr,
     },
   ];
 
   const logisticsAgent: LogisticsAgentResult = {
     agentName: "Logistics Agent",
-    role: "Allocates relief parcels & medical stock against warehouse ceiling",
+    role: "Checks relief parcel quantities against camp stock",
     allocatedItems,
-    stockCeilingVerified: true,
-    stockAlert: null,
+    stockCeilingVerified,
+    stockAlert,
     autoRestockTriggered: false,
     shippableBoxes: Math.ceil(people / 3),
     assignedVolunteerName: params.volunteerName ?? null,
     thoughts: logisticsThoughts,
-    verdict: `Allocated ${allocatedItems.length} essential relief items against camp stock. Ceiling verified.`,
+    verdict: stockCeilingVerified
+      ? `All ${allocatedItems.length} parcel items confirmed in camp stock.`
+      : stockAlert ?? "Camp stock could not be verified.",
   };
 
   // 4. 🗺️ Route Agent
@@ -454,7 +507,9 @@ export function runMultiAgentPipeline(params: {
       riskDriver: `${params.priority.toUpperCase()} priority flood SOS with ${people} victim(s) in ${params.district}. Reported needs: ${needs.slice(0, 2).join(", ") || "Urgent Relief"} with severe diarrheal/pathogen risks.`,
       priorityEffect: `Risk score ${riskAssessment.score.toFixed(1)}/10 places this request in the ${percentile} urgency bracket nationwide — immediate camp dispatch authorized.`,
       routeDecision: `Safe route identified via ${viaName} (${distKm} km, ~${durMin} min ETA) using ${vehicle} to bypass submerged canal crossings.`,
-      allocationDecision: `Dispatched ${allocatedItems.length} items with hard stock verification, featuring oral rehydration solution, water purification tabs, and emergency nutrition.`,
+      allocationDecision: stockCeilingVerified
+        ? `All ${allocatedItems.length} parcel items confirmed in camp stock.`
+        : `Parcel stock result: ${stockAlert ?? "Stock could not be verified."}`,
       resourceEfficiency: `Cost optimized at PKR ${costPerPerson.toLocaleString()}/beneficiary (${efficiencyScore}% efficiency rating). Zero resource duplication.`,
     },
   };
