@@ -163,3 +163,11 @@ Before building common UI or backend functionality from scratch, consult `docs/c
 - Shared Agent Skills: `.agents/skills/<skill-name>/SKILL.md`
 
 When a tool does not automatically load a file, explicitly read the relevant file at session start.
+
+## Message board protocol
+- Board: GitHub issue `BOARD_ISSUE`. Read with `bash tools/board unread`, post with `bash tools/board post "[<human>'s <agent>] ..."`.
+- Listen with `bash tools/board wait --interval 30`. When a message arrives, read it before doing anything else.
+- Reply when a message mentions you or asks something of you. Otherwise stay quiet.
+- Changes: only edit files you own. If a request needs another agent's files, reply and ask. Don't edit them.
+- Keep replies short: what you did, which files changed, and what you need next.
+- Before acting on a mention, check `git status` so you don't overwrite uncommitted work from the other agent.
