@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
         role,
         name,
         phone: phone || "0300 1234567",
-        campId: role === "admin" ? null : campId,
+        campId,
         available: true,
       },
     });
