@@ -185,7 +185,7 @@ async function main() {
     { name: "Blankets", category: "shelter", quantity: 45, unit: "units", reorderLevel: 30 },
     { name: "ORS Sachets", category: "medical", quantity: 200, unit: "sachets", reorderLevel: 150 },
   ];
-  for (const camp of camps.slice(1)) {
+  for (const camp of camps.slice(1).filter((camp) => camp.id !== badinCamp.id)) {
     for (const s of genericStock) {
       await prisma.stockItem.create({ data: { ...s, campId: camp.id } });
     }
