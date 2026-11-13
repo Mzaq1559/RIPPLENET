@@ -50,7 +50,7 @@ export interface StockSnapshotItem {
 
 export interface LogisticsAgentResult {
   agentName: "Logistics Agent";
-  role: "Allocates relief parcels & medical stock against warehouse ceiling";
+  role: "Checks relief parcel quantities against camp stock";
   allocatedItems: {
     name: string;
     qty: string;
