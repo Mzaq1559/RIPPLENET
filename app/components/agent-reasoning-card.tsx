@@ -154,23 +154,23 @@ export function AgentReasoningCard({
         stages: {
           monitoring: {
             actionTitle: "Auditing Warehouse Inventory",
-            description: `Connecting to base camp warehouse inventory database. Reading stock balances for medical, water, food & shelter items...`,
-            terminalLog: `[LOGISTICS-01] 📡 MONITORING: Connecting to camp warehouse stock ledger. Checking quantities for medical, water tabs, food packs, and shelter kits.`,
+            description: `Reviewing the camp stock results for ${logisticsAgent.allocatedItems.length} parcel items...`,
+            terminalLog: `[LOGISTICS-01] 📡 MONITORING: Camp stock lookup completed. Reviewing item quantities and tracking status.`,
           },
           thinking: {
             actionTitle: "Matching Distress Profile to Stock",
-            description: `Matching citizen distress profile with optimal relief kit contents. Verifying remaining camp stock thresholds & packaging weight constraints...`,
-            terminalLog: `[LOGISTICS-02] 🧠 THINKING: Matching needs (${needsStr}) against stock availability. Allocating ${logisticsAgent.allocatedItems.length} verified item types.`,
+            description: `Comparing the requested parcel quantities with the camp inventory for ${needsStr}...`,
+            terminalLog: `[LOGISTICS-02] 🧠 THINKING: Compared requested parcel items with the available camp stock records.`,
           },
           working: {
             actionTitle: "Assembling Parcel Manifest",
-            description: `Reserving ${logisticsAgent.allocatedItems.length} relief line items from warehouse shelves. Generating tamper-evident waterproof crate manifests for volunteer pickup...`,
-            terminalLog: `[LOGISTICS-03] ⚙️ WORKING: Packing ${logisticsAgent.shippableBoxes} crate(s). Stock ceiling checked. Reserving items on warehouse ledger.`,
+            description: `Preparing a ${logisticsAgent.allocatedItems.length}-item parcel manifest and recording the stock check outcome...`,
+            terminalLog: `[LOGISTICS-03] ⚙️ WORKING: Preparing ${logisticsAgent.shippableBoxes} crate(s). Stock availability is reported separately; no stock reservation is performed.`,
           },
           decision_made: {
             actionTitle: "Relief Parcel Manifest Finalized",
             description: logisticsAgent.verdict,
-            terminalLog: `[LOGISTICS-04] ✅ DECISION: ${logisticsAgent.allocatedItems.length} relief line items bundled and ready for volunteer loading. Zero stockout conflict.`,
+            terminalLog: `[LOGISTICS-04] ✅ DECISION: ${logisticsAgent.verdict}`,
           },
         },
       },
@@ -496,6 +496,11 @@ export function AgentReasoningCard({
           <p className="text-[12px] leading-relaxed text-slate-700 font-medium">
             {currentStageInfo.description}
           </p>
+          {activeTab === "logistics" && logisticsAgent.stockAlert && (
+            <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold leading-relaxed text-amber-800">
+              {logisticsAgent.stockAlert}
+            </p>
+          )}
         </div>
 
         {/* Agent Specific Evidence & Thoughts Drawer */}
