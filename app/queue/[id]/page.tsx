@@ -495,7 +495,7 @@ export default async function RequestDetailsPage(props: { params: Promise<{ id: 
                 5. Resource Agent Cost Estimate
               </p>
               <p className="mt-1.5 text-[12px] leading-[1.55] text-slate-600">
-                {pipeline.resourceAgent.economicVerdict}.
+                {pipeline.resourceAgent.economicVerdict}
               </p>
             </div>
           </div>
