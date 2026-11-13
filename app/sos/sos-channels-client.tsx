@@ -19,6 +19,7 @@ import {
 } from "../components/icons";
 import { Translated } from "../components/citizen-translated";
 import { useCitizenLocation } from "../components/use-citizen-location";
+import { RevealOnScroll } from "../components/reveal-on-scroll";
 
 interface SampleRequest {
   code: string;
@@ -132,7 +133,7 @@ export function SosChannelsClient() {
 
   return (
     <>
-      <section className="mt-7 flex flex-col gap-3 px-5" aria-label="Ways to send an SOS">
+      <RevealOnScroll className="mt-7 flex flex-col gap-3 px-5" aria-label="Ways to send an SOS">
         {/* Video SOS */}
         <Link
           href="/sos/video"
@@ -216,10 +217,10 @@ export function SosChannelsClient() {
           </span>
           <IconChevronRight className="h-5 w-5 shrink-0 text-slate-300" />
         </a>
-      </section>
+      </RevealOnScroll>
 
       {/* Track SOS Request Quick-Launcher */}
-      <section className="mt-4 px-5">
+      <RevealOnScroll className="mt-4 px-5">
         <Link
           href="/status"
           className="flex items-center gap-3.5 rounded-2xl border border-sky-100 bg-gradient-to-r from-sky-50/90 via-sky-50/40 to-white p-4 shadow-sm transition hover:border-sky-300 active:scale-[0.99] group"
@@ -240,10 +241,10 @@ export function SosChannelsClient() {
           </span>
           <IconChevronRight className="h-5 w-5 shrink-0 text-slate-300 group-hover:text-channel transition" />
         </Link>
-      </section>
+      </RevealOnScroll>
 
       {/* Sample Live Requests Quick-Selector */}
-      <section className="mt-4 px-5">
+      <RevealOnScroll className="mt-4 px-5">
         <div className="rounded-3xl border border-sky-100 bg-gradient-to-b from-white to-sky-50/50 p-4 shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
             <div className="flex items-center gap-1.5">
@@ -281,7 +282,7 @@ export function SosChannelsClient() {
             ))}
           </div>
         </div>
-      </section>
+      </RevealOnScroll>
 
       {/* USSD Keypad Interactive Dialog */}
       {ussdOpen && (
@@ -290,7 +291,7 @@ export function SosChannelsClient() {
             {/* USSD Screen Header */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping motion-reduce:animate-none" />
                 <p className="font-mono text-[12px] font-bold text-emerald-400">USSD *313# (Alkhidmat SOS)</p>
               </div>
               <button
@@ -360,7 +361,7 @@ export function SosChannelsClient() {
             {/* Step: Submitting */}
             {ussdStep === "submitting" && (
               <div className="mt-6 py-6 text-center">
-                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent motion-reduce:animate-none" />
                 <p className="mt-3 font-mono text-[12.5px] text-slate-300">
                   Transmitting USSD packet to nearest base camp...
                 </p>

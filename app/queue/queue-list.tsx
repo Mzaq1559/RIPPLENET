@@ -118,7 +118,7 @@ export function QueueList({ items }: { items: QueueItem[] }) {
                 {formatDayTime(new Date(item.createdAt))}
               </span>
               <span
-                className={`rounded-full px-2 py-[3px] text-[9px] font-bold ${statusTag[item.status] ?? statusTag.pending}`}
+                className={`rounded-full px-2 py-[3px] text-[9px] font-bold transition-colors duration-300 motion-reduce:transition-none ${statusTag[item.status] ?? statusTag.pending}`}
               >
                 {statusLabel[item.status] ?? item.status}
               </span>

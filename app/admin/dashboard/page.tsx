@@ -27,6 +27,7 @@ import { prisma } from "../../../lib/db";
 import { getSession } from "../../../lib/session";
 import { assessRisk } from "../../../lib/risk";
 import { parseNeeds } from "../../../lib/needs";
+import { AnimatedNumber } from "../../components/animated-number";
 
 export const dynamic = "force-dynamic";
 
@@ -246,7 +247,7 @@ export default async function AdminDashboardPage() {
   const stats = [
     {
       label: "Total Requests",
-      value: total.toLocaleString(),
+      value: total,
       sub: `+${todayCount}`,
       subDetail: "today",
       tone: "text-ink",
@@ -255,7 +256,7 @@ export default async function AdminDashboardPage() {
     },
     {
       label: "Resolved",
-      value: resolved.toLocaleString(),
+      value: resolved,
       sub: `${pct(resolved)}%`,
       subDetail: "of total",
       tone: "text-emerald-600",
@@ -264,7 +265,7 @@ export default async function AdminDashboardPage() {
     },
     {
       label: "In Progress",
-      value: inProgress.toLocaleString(),
+      value: inProgress,
       sub: `${pct(inProgress)}%`,
       subDetail: "of total",
       tone: "text-sky-600",
@@ -273,7 +274,7 @@ export default async function AdminDashboardPage() {
     },
     {
       label: "Pending",
-      value: pending.toLocaleString(),
+      value: pending,
       sub: `${pct(pending)}%`,
       subDetail: "of total",
       tone: "text-amber-600",
@@ -314,7 +315,9 @@ export default async function AdminDashboardPage() {
               <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-slate-400">
                 {label}
               </p>
-              <p className={`mt-1 font-display text-[22px] font-extrabold ${tone}`}>{value}</p>
+              <p className={`mt-1 font-display text-[22px] font-extrabold tabular-nums ${tone}`}>
+                <AnimatedNumber value={value} />
+              </p>
               <p className={`mt-0.5 flex items-center gap-1 text-[10px] font-semibold ${subTone}`}>
                 {showArrow && <IconTrendingUp className="h-3 w-3" />}
                 {sub}

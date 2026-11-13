@@ -26,6 +26,8 @@ import {
 } from "./components/icons";
 import { Logo } from "./components/logo";
 import { LiveImpactSection } from "./components/live-impact-section";
+import { RevealOnScroll } from "./components/reveal-on-scroll";
+import { LazyReliefOrbit } from "./components/lazy-relief-orbit";
 
 const features = [
   { label: "No Data for Others", Icon: IconShield },
@@ -140,7 +142,11 @@ export default function Home() {
       <AppHeader />
 
       <main className="pb-8">
-        <section className="px-5 pt-5">
+        <RevealOnScroll className="relative isolate px-5 pt-5" trigger="mount">
+          <div className="pointer-events-none absolute -right-7 -top-8 z-0 h-44 w-44 opacity-35">
+            <LazyReliefOrbit />
+          </div>
+          <div className="relative z-10">
           <span className="inline-flex items-center gap-2 rounded-full bg-ink px-3.5 py-[7px] text-[10px] font-bold uppercase tracking-[0.16em] text-white">
             <span className="h-1.5 w-1.5 rounded-full bg-cyan-pop" />
             AI-Powered Flood Response
@@ -169,9 +175,10 @@ export default function Home() {
               Request Demo
             </Link>
           </div>
-        </section>
+          </div>
+        </RevealOnScroll>
 
-        <section className="mt-6 px-5" aria-label="Live response overview">
+        <RevealOnScroll className="mt-6 px-5" aria-label="Live response overview">
           <div className="relative aspect-[1141/1379] w-full overflow-hidden rounded-[24px] shadow-xl shadow-ink/10">
             <Image
               src="/images/hero_section.png"
@@ -204,7 +211,7 @@ export default function Home() {
             </svg>
 
             <div className="absolute" style={{ left: "53.5%", top: "52.5%" }}>
-              <span className="absolute inset-0 m-auto h-3 w-3 animate-ping rounded-full bg-white/50" />
+              <span className="absolute inset-0 m-auto h-3 w-3 animate-ping rounded-full bg-white/50 motion-reduce:animate-none" />
               <span className="relative block h-3 w-3 rounded-full bg-terracotta shadow-md ring-[3px] ring-white" />
             </div>
 
@@ -239,9 +246,9 @@ export default function Home() {
               }
             />
           </div>
-        </section>
+        </RevealOnScroll>
 
-        <section className="mt-7 px-5">
+        <RevealOnScroll className="mt-7 px-5">
           <div className="grid grid-cols-3 gap-2">
             {features.map(({ label, Icon }) => (
               <div key={label} className="flex flex-col items-center text-center">
@@ -252,9 +259,9 @@ export default function Home() {
               </div>
             ))}
           </div>
-        </section>
+        </RevealOnScroll>
 
-        <section id="how-it-works" className="mt-9 px-5">
+        <RevealOnScroll className="mt-9 px-5" id="how-it-works">
           <h2 className="font-display text-[19px] font-bold tracking-tight text-ink">
             How RippleNet AI Works
           </h2>
@@ -277,11 +284,11 @@ export default function Home() {
               </div>
             ))}
           </div>
-        </section>
+        </RevealOnScroll>
 
         <LiveImpactSection />
 
-        <section className="mt-9 px-5">
+        <RevealOnScroll className="mt-9 px-5">
           <div className="flex items-baseline justify-between">
             <h2 className="font-display text-[19px] font-bold tracking-tight text-ink">
               Nearby Relief Camps
@@ -323,15 +330,15 @@ export default function Home() {
               <IconNavigation className="h-[18px] w-[18px]" />
             </span>
           </Link>
-        </section>
+        </RevealOnScroll>
 
-        <section className="mt-8 px-5">
+        <RevealOnScroll className="mt-8 px-5">
           <Link
             href="/demo"
             className="flex items-center gap-3.5 rounded-3xl border border-cyan-200 bg-gradient-to-r from-ink to-channel p-4 text-white shadow-xl shadow-ink/20 transition active:scale-[0.98]"
           >
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-cyan-pop shadow-inner">
-              <IconBrain className="h-6 w-6 animate-pulse" />
+              <IconBrain className="h-6 w-6 animate-pulse motion-reduce:animate-none" />
             </span>
             <div className="min-w-0 flex-1 leading-tight">
               <div className="flex items-center gap-2">
@@ -346,9 +353,9 @@ export default function Home() {
             </div>
             <IconChevronRight className="h-5 w-5 shrink-0 text-white/60" />
           </Link>
-        </section>
+        </RevealOnScroll>
 
-        <section className="mt-9 px-5" aria-label="Choose your role">
+        <RevealOnScroll className="mt-9 px-5" aria-label="Choose your role">
           <h2 className="font-display text-[19px] font-bold tracking-tight text-ink">
             Choose Your Role
           </h2>
@@ -397,7 +404,7 @@ export default function Home() {
               <p className="text-[9.5px] text-slate-400">Oversee all operations</p>
             </Link>
           </div>
-        </section>
+        </RevealOnScroll>
       </main>
     </div>
   );

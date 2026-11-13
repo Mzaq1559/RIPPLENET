@@ -1,0 +1,14 @@
+---
+description: Shared project-wide engineering rules for all Cursor tasks
+alwaysApply: true
+---
+
+Read the root `AGENTS.md` before editing. It is the canonical project instruction file.
+
+- Inspect the existing architecture and working tree first.
+- Keep changes focused and consistent with existing conventions.
+- Use relevant skills from `.agents/skills/`.
+- Coordinate parallel work by assigning exclusive file ownership.
+- Add or update tests for behavior changes.
+- Run relevant checks and report exact results; never invent successful verification.
+- Protect secrets and avoid destructive operations without approval.
