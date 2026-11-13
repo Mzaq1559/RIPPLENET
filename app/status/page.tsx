@@ -362,7 +362,7 @@ export default async function StatusPage(props: {
     lng: request.lng,
     campName: camp?.name,
     volunteerName: volunteer?.name,
-    routeDistanceKm: distanceKm,
+    routeDistanceKm: route?.distanceKm ?? null,
     routeDurationMin: etaMin,
     routeVia: route?.viaName,
     rainfall24h: liveRainfall.last24hMm,
@@ -431,7 +431,7 @@ export default async function StatusPage(props: {
             <p className="flex items-start gap-1.5">
               <span className="text-sky-600">🗺️</span>
               <span>
-                <strong className="text-ink">Route Priority:</strong> Ranked {pipeline.percentile} urgency with bypass travel via {pipeline.routeAgent.viaRoadName}.
+                <strong className="text-ink">Route:</strong> {pipeline.routeAgent.verdict}
               </span>
             </p>
           </div>
