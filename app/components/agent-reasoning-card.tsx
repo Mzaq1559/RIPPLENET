@@ -235,7 +235,7 @@ export function AgentReasoningCard({
           thinking: {
             actionTitle: "Calculating Per-Person Estimate",
             description: "The current estimate uses placeholder unit prices; budget efficiency and duplicate-aid waste are not assessed.",
-            terminalLog: "[RESOURCE-02] 🧠 THINKING: Budget efficiency and duplicate-aid waste are not assessed.",
+            terminalLog: "[RESOURCE-02] 🧠 THINKING: This output is a cost estimate, not a budget audit.",
           },
           working: {
             actionTitle: "Preparing Cost Estimate",
