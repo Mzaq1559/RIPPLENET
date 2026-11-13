@@ -465,7 +465,7 @@ export function runMultiAgentPipeline(params: {
       step: 3,
       agent: "resource",
       title: "Assessment Scope",
-      detail: "Prices are placeholders; budget efficiency and duplicate-aid waste have not been assessed.",
+      detail: "Only a cost estimate is provided; no budget audit is included.",
       timestamp: timeStr,
     },
   ];
