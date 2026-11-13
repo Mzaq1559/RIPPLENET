@@ -17,6 +17,21 @@ export const metadata: Metadata = {
   title: "Incoming Requests — RippleNet AI",
 };
 
+function sortQueueItems<T extends { status: string; score: number; createdAt: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const aFinished = a.status === "resolved" || a.status === "cancelled";
+    const bFinished = b.status === "resolved" || b.status === "cancelled";
+
+    if (aFinished !== bFinished) return aFinished ? 1 : -1;
+
+    if (!aFinished) {
+      return b.score - a.score || Date.parse(a.createdAt) - Date.parse(b.createdAt);
+    }
+
+    return Date.parse(b.createdAt) - Date.parse(a.createdAt);
+  });
+}
+
 export default async function QueuePage(props: {
   searchParams?: Promise<{ campId?: string }>;
 }) {
@@ -61,7 +76,7 @@ export default async function QueuePage(props: {
     requests = getMockRequestsForCamp(currentCamp);
   }
 
-  const items = requests.map((r) => {
+  const items = sortQueueItems(requests.map((r) => {
     const needs = parseNeeds(r.needs);
     const risk = assessRisk({ priority: r.priority, type: r.type, peopleCount: r.peopleCount, needs });
     const createdDate = r.createdAt instanceof Date ? r.createdAt : new Date(r.createdAt || Date.now());
@@ -77,7 +92,7 @@ export default async function QueuePage(props: {
       levelColor: risk.levelColor,
       badge: risk.badge,
     };
-  });
+  }));
 
   return (
     <AuthGuard role="camp_manager" loginHref="/login">
