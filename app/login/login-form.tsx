@@ -89,7 +89,7 @@ export function LoginForm() {
           name: signupName,
           phone: signupPhone || "0300 1234567",
           password: signupPassword,
-          role: roleApi[role] ?? "camp_manager",
+          role: roleApi[role] ?? "volunteer",
         }),
       });
       const data = await res.json();
@@ -121,7 +121,7 @@ export function LoginForm() {
         </button>
         <button
           type="button"
-          onClick={() => { setTab("signup"); setError(""); }}
+          onClick={() => { setTab("signup"); setRole("Volunteer"); setError(""); }}
           className={`flex-1 rounded-xl py-2 text-[13px] font-bold transition ${
             tab === "signup" ? "bg-white text-ink shadow-xs" : "text-slate-500"
           }`}
@@ -151,7 +151,7 @@ export function LoginForm() {
             }}
             className="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-3.5 pr-10 text-[14px] font-semibold text-ink outline-none transition focus:border-channel focus:ring-2 focus:ring-sky-100"
           >
-            {roles.map((r) => (
+            {roles.filter((r) => tab === "signup" ? r === "Volunteer" : true).map((r) => (
               <option key={r}>{r}</option>
             ))}
           </select>
