@@ -110,23 +110,27 @@ export default async function StatusPage(props: {
 
   if (!code) return shell(<TrackSearch />);
 
-  let request: any = null;
-  let dbCamps: any[] = [];
-  try {
-    [request, dbCamps] = await Promise.all([
-      prisma.request.findUnique({
-        where: { code },
-        include: {
-          camp: { select: { id: true, name: true, district: true, province: true, phone: true, lat: true, lng: true } },
-          volunteer: { select: { id: true, name: true, phone: true } },
-        },
-      }),
-      prisma.camp.findMany({
-        select: { id: true, name: true, district: true, province: true, phone: true, lat: true, lng: true },
-      }),
-    ]);
-  } catch (error) {
-    console.error("Database query error on /status:", error);
+  const statusData = await (async () => {
+    try {
+      return await Promise.all([
+        prisma.request.findUnique({
+          where: { code },
+          include: {
+            camp: { select: { id: true, name: true, district: true, province: true, phone: true, lat: true, lng: true } },
+            volunteer: { select: { id: true, name: true, phone: true } },
+          },
+        }),
+        prisma.camp.findMany({
+          select: { id: true, name: true, district: true, province: true, phone: true, lat: true, lng: true },
+        }),
+      ] as const);
+    } catch (error) {
+      console.error("Database query error on /status:", error);
+      return null;
+    }
+  })();
+
+  if (!statusData) {
     return shell(
       <div className="mx-5 mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-[13px] text-amber-800">
         Request tracking is temporarily unavailable. Please try again shortly.
@@ -134,6 +138,7 @@ export default async function StatusPage(props: {
     );
   }
 
+  const [request, dbCamps] = statusData;
   if (!request) return shell(<TrackSearch notFound />);
 
   // Resolve a camp only from persisted records. Do not synthesize fallback camps.
