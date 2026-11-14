@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import L from "leaflet";
 import { MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { MapZoomControls } from "./map-zoom-controls";
 import "leaflet/dist/leaflet.css";
 
 export interface RouteMapPoint {
@@ -52,7 +53,7 @@ export default function RouteMapInner({
       center={positions[Math.floor(positions.length / 2)]}
       zoom={12}
       zoomControl={false}
-      scrollWheelZoom={false}
+      scrollWheelZoom={true}
       attributionControl
       className="h-full w-full relative z-[1] isolate"
     >
@@ -72,6 +73,7 @@ export default function RouteMapInner({
         </Tooltip>
       </Marker>
       <FitRoute points={positions} />
+      <MapZoomControls />
     </MapContainer>
   );
 }
