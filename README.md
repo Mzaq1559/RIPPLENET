@@ -2,6 +2,20 @@
 
 > **AI-assisted flood-relief coordination for faster, more explainable humanitarian response.**
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-16-black?logo=next.js" alt="Next.js 16" />
+  <img src="https://img.shields.io/badge/React-19-149eca?logo=react" alt="React 19" />
+  <img src="https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/PostgreSQL-Neon-4169e1?logo=postgresql" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/AI-Groq-f55036?logo=groq" alt="Groq" />
+  <img src="https://img.shields.io/badge/Maps-OpenStreetMap-7ebc6f?logo=openstreetmap" alt="OpenStreetMap" />
+  <img src="https://img.shields.io/badge/License-MIT-2ea44f" alt="MIT License" />
+</p>
+
+<p align="center">
+  <b>🌊 Observe</b> &nbsp; • &nbsp; <b>🤖 Analyze</b> &nbsp; • &nbsp; <b>📍 Coordinate</b> &nbsp; • &nbsp; <b>🤝 Respond</b>
+</p>
+
 RippleNet is a hackathon prototype for coordinating flood-related assistance requests, health-camp inventory, volunteers, and request status. It gives camp managers a ranked request queue and an evidence-backed analysis from five narrowly scoped AI agents. The system is designed to support human decisions—not replace emergency responders, clinicians, or camp managers.
 
 **Live demo:** https://ripplenet.vercel.app  
@@ -11,7 +25,7 @@ RippleNet is a hackathon prototype for coordinating flood-related assistance req
 
 ---
 
-## Architecture overview
+## 🏗️ Architecture overview
 
 The diagram below shows how users interact with the RippleNet application, how requests flow through the server-side pipeline, and which external services provide supporting evidence.
 
@@ -59,52 +73,53 @@ flowchart TB
 
 For the live agent-analysis sequence, component responsibilities, trust boundaries, and deployment details, see [the full architecture documentation](docs/architecture.md).
 
-## The problem
+## 🚨 The problem
 
 During a flood or other emergency, help requests can arrive faster than teams can manually triage them. When volunteers, transport, and supplies are limited, responders need more than an unqualified priority label: they need to see the available evidence, understand what is unknown, check stock, and retain control over dispatch.
 
 RippleNet brings request intake, camp operations, volunteer task tracking, and advisory analysis into one web application. Its central idea is **explainable decision support with explicit uncertainty**.
 
-## What the prototype provides
+## ✨ What the prototype provides
 
-- Public request submission and request-status lookup.
-- Role-based workflows for administrators, camp managers, and volunteers.
-- A camp request queue with a deterministic, rule-based triage score.
-- Five concurrent Groq-powered agents that analyze a request from separate operational perspectives.
-- Weather evidence from Open-Meteo and road-network distance/ETA from OSRM where available.
-- Local inventory matching against the database; AI suggestions do not reserve or deduct stock.
-- Persisted advisory analysis with a ten-minute cache and an explicit refresh action.
-- Camp, stock, volunteer, complaint, and restock-management screens.
-- A static scenario demo, clearly distinguished from live model inference.
+- 🌐 Public request submission and request-status lookup.
+- 🔐 Role-based workflows for administrators, camp managers, and volunteers.
+- 🚦 A camp request queue with a deterministic, rule-based triage score.
+- 🧠 Five concurrent Groq-powered agents that analyze a request from separate operational perspectives.
+- 🌦️ Weather evidence from Open-Meteo and road-network distance/ETA from OSRM where available.
+- 📦 Local inventory matching against the database; AI suggestions do not reserve or deduct stock.
+- ⚡ Persisted advisory analysis with a ten-minute cache and an explicit refresh action.
+- 🏕️ Camp, stock, volunteer, complaint, and restock-management screens.
+- 🎬 A static scenario demo, clearly distinguished from live model inference.
 
-## Five-agent analysis
+## 🤖 Five-agent analysis
 
 | Agent | Responsibility | Explicit boundary |
 |---|---|---|
-| Flood Evidence | Summarizes supplied observed/forecast precipitation | Rainfall is not proof of inundation, flood depth, river level, or road flooding |
-| Health Triage Support | Identifies reported urgency signals and safe next steps | No diagnosis, outbreak probability, prescription, dosage, or replacement for a clinician |
-| Logistics Planning | Suggests relief items and compares them with camp inventory | No stock reservation, deduction, dispatch, or automatic restocking |
-| Route Information | Summarizes OSRM route distance and estimated duration | Does not verify road closures, passability, or vehicle suitability |
-| Resource Transparency | Explains whether a cost estimate can be supported | Costs remain unavailable without a verified price catalog; no invented prices |
+| 🌧️ Flood Evidence | Summarizes supplied observed/forecast precipitation | Rainfall is not proof of inundation, flood depth, river level, or road flooding |
+| 🩺 Health Triage Support | Identifies reported urgency signals and safe next steps | No diagnosis, outbreak probability, prescription, dosage, or replacement for a clinician |
+| 📦 Logistics Planning | Suggests relief items and compares them with camp inventory | No stock reservation, deduction, dispatch, or automatic restocking |
+| 🗺️ Route Information | Summarizes OSRM route distance and estimated duration | Does not verify road closures, passability, or vehicle suitability |
+| 💰 Resource Transparency | Explains whether a cost estimate can be supported | Costs remain unavailable without a verified price catalog; no invented prices |
 
 Each agent uses the configured Groq model through a server-only integration. Calls run concurrently. A failed agent is shown as failed; the application does not silently substitute fabricated output. The UI presents concise summaries and evidence, not hidden model reasoning.
 
 **Important:** the numeric queue score is calculated by deterministic application logic. It is not generated by an LLM, calibrated against historical outcomes, or a statistical percentile.
 
-## Technology
+## 🧰 Technology
 
 - **Application:** Next.js 16 App Router, React 19, TypeScript
 - **Styling/UI:** Tailwind CSS 4, project components
 - **Database:** PostgreSQL (configured for Neon) with Prisma 6
 - **AI inference:** Groq OpenAI-compatible Chat Completions API
 - **Weather:** Open-Meteo
+- **Maps:** Leaflet + React Leaflet with interactive zoom controls and OpenStreetMap tiles
 - **Routing:** OSRM public routing service using OpenStreetMap road data
 - **Authentication:** application-managed sessions/JWT utilities and role checks
 - **Deployment target:** Vercel-compatible Next.js deployment
 
 See [docs/architecture.md](docs/architecture.md) and [docs/data-model.md](docs/data-model.md) for implementation details.
 
-## Quick start
+## 🚀 Quick start
 
 ### Requirements
 
@@ -168,7 +183,7 @@ Then sign in with an authorized camp-manager account, open a real request, and c
 
 For full setup, troubleshooting, and deployment notes, see [docs/getting-started.md](docs/getting-started.md).
 
-## Main application areas
+## 🧭 Main application areas
 
 | Area | Purpose |
 |---|---|
@@ -186,7 +201,7 @@ For full setup, troubleshooting, and deployment notes, see [docs/getting-started
 
 Routes and permissions may evolve during the hackathon; consult the current application code before integrating external clients.
 
-## Request and AI data flow
+## 🔄 Request and AI data flow
 
 1. A citizen request is submitted and persisted in PostgreSQL.
 2. A camp manager opens the request detail page.
@@ -198,7 +213,7 @@ Routes and permissions may evolve during the hackathon; consult the current appl
 
 The analysis cache lasts ten minutes. A manager can explicitly request a refresh. More detail is in [docs/ai-agent-runtime.md](docs/ai-agent-runtime.md).
 
-## Safety, privacy, and limitations
+## 🛡️ Safety, privacy, and limitations
 
 RippleNet is a **hackathon prototype**, not a certified emergency-response, medical, dispatch, or public-safety system.
 
@@ -214,7 +229,7 @@ RippleNet is a **hackathon prototype**, not a certified emergency-response, medi
 
 See [docs/ai-agent-runtime.md](docs/ai-agent-runtime.md) for the detailed data-handling description and [docs/demo-guide.md](docs/demo-guide.md) for a safe demo checklist.
 
-## Repository documentation
+## 📚 Repository documentation
 
 - [Documentation index](docs/README.md)
 - [Architecture and diagram](docs/architecture.md)
@@ -226,7 +241,7 @@ See [docs/ai-agent-runtime.md](docs/ai-agent-runtime.md) for the detailed data-h
 - [Third-party component/service catalog](docs/component-and-service-catalog.md)
 - [Agent ecosystem and coding-agent workflow](docs/agent-ecosystem.md)
 
-## Development scripts
+## ⚙️ Development scripts
 
 | Command | Description |
 |---|---|
@@ -238,6 +253,6 @@ See [docs/ai-agent-runtime.md](docs/ai-agent-runtime.md) for the detailed data-h
 | `npm run db:seed` | Run the database seed script |
 | `npm run db:reset` | Destructive schema push + seed; use only on disposable data |
 
-## License
+## 📄 License
 
 This project is released under the [MIT License](LICENSE). Third-party assets and dependencies remain subject to their own licenses and notices; see [THIRD_PARTY.md](THIRD_PARTY.md).
