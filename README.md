@@ -1,113 +1,195 @@
-# RippleNet AI — Full Project Context
+# RippleNet AI
 
-## One-line pitch
-RippleNet AI is a decision-intelligence platform that turns chaotic, low-literacy-accessible flood SOS signals into one ranked, AI-justified deployment order for Alkhidmat health camps — so scarce volunteers and supplies go to the highest-risk victim first, with the reasoning attached.
+> **AI-assisted flood-relief coordination for faster, more explainable humanitarian response.**
 
-## Problem
-During floods, requests for help arrive faster (calls, USSD, voice notes) than they can be manually ranked. Two victims may both be in danger but only one volunteer/truck is free — today that choice is made by whoever's loudest, not who's most at risk. There's also no defensible record of *why* aid went where it went.
+RippleNet is a hackathon prototype for coordinating flood-related assistance requests, health-camp inventory, volunteers, and request status. It gives camp managers a ranked request queue and an evidence-backed analysis from five narrowly scoped AI agents. The system is designed to support human decisions—not replace emergency responders, clinicians, or camp managers.
 
-## Who it's for
-Alkhidmat health camps, field volunteers, global admin (Alkhidmat/government oversight), and low-literacy/low-tech flood victims in rural Pakistan (e.g. Badin, Buner, Lasbela).
-
----
-
-## System structure — 3 layers
-
-### Layer 1: Omni-Channel Ingestion (citizen-facing, no login, no dashboard feel)
-- **SOS Video** (smartphone): GPS auto-extracted from video metadata.
-- **USSD `*313#`** (basic keypad phone): no data/app/literacy needed, tower-triangulated location.
-- **WhatsApp voice note**: transcribed via ASR (Punjabi/Sindhi/Pashto/Balochi), crisis keywords ("Paani," "Doob") auto-spike risk to 10/10, system can call back with spoken directions.
-- Victim also reports symptoms/needs (fever, injury, no clean water, etc.) at this stage.
-
-### Layer 2: AI Decision Engine — 6 agents, run sequentially per request
-1. **Flood Agent** — rainfall + satellite surface-water data → 1–10 severity score.
-2. **Health Agent** — reads victim's symptoms + housing/water exposure → outputs a **specific, contraindication-aware resource list** per victim (e.g. no fever medicine if open wound present — antiseptic instead) → also flags village-level outbreak risk tier (Primary/Secondary).
-3. **Logistics Agent** — builds the exact parcel from Health Agent's list against **live camp stock as a hard ceiling**; matches nearest available volunteer; auto-files a restock request to admin if stock is low; rounds into shippable units (crates/boxes).
-4. **Route Agent** — checks road passability, computes detour + delay if blocked, calculates trip count from cargo weight.
-5. **Health Camp Manager Agent** (formerly "Complaint Resolution Agent") — oversees the whole pipeline for errors/stalls; resolves complaints from both citizens ("never arrived," "wrong priority") and field staff ("bad route," "unfair allocation"); permanently logs what was delivered, to whom, when, by whom.
-6. *(Note: a "Resource Agent" for cost/freight tracking was proposed then explicitly removed — folded into Logistics Agent.)*
-
-**Output of every case:** a ranked **Deployment Manifesto** ending in a fixed four-header justification block:
-- Risk Driver
-- Priority Effect
-- Route Decision
-- Allocation Decision
-
-This justification block is the system's core "defensibility" differentiator vs. competitors that just show a dashboard number.
-
-### Layer 3: Human Execution Layer (role-based dashboards)
-Request routing is **camp-first, not admin-first**:
-1. Citizen → **nearest health camp** (not global admin directly)
-2. Camp checks: available volunteer + sufficient stock?
-   - Yes → dispatch
-   - No → auto-forward to next-nearest camp
-3. **Global admin** = oversight only (sees camps-covered count, pending time, resolved/not) — never handles individual requests directly
-4. **Volunteer** — follows AI route/ETA, delivers parcel, marks Resolved (timestamps, deducts stock, frees volunteer)
-5. **Citizen** — gets a ContactCard (nearest base camp, dispatch number, district hotline) + live status (Pending/In Transit/Resolved)
+**Live demo:** https://ripplenet.vercel.app  
+**Documentation:** [docs/README.md](docs/README.md)  
+**Architecture:** [docs/architecture.md](docs/architecture.md)  
+**AI runtime and safety boundaries:** [docs/ai-agent-runtime.md](docs/ai-agent-runtime.md)
 
 ---
 
-## Tech stack (MVP, near-zero cost)
+## The problem
 
-| Layer | Choice |
+During a flood or other emergency, help requests can arrive faster than teams can manually triage them. When volunteers, transport, and supplies are limited, responders need more than an unqualified priority label: they need to see the available evidence, understand what is unknown, check stock, and retain control over dispatch.
+
+RippleNet brings request intake, camp operations, volunteer task tracking, and advisory analysis into one web application. Its central idea is **explainable decision support with explicit uncertainty**.
+
+## What the prototype provides
+
+- Public request submission and request-status lookup.
+- Role-based workflows for administrators, camp managers, and volunteers.
+- A camp request queue with a deterministic, rule-based triage score.
+- Five concurrent Groq-powered agents that analyze a request from separate operational perspectives.
+- Weather evidence from Open-Meteo and road-network distance/ETA from OSRM where available.
+- Local inventory matching against the database; AI suggestions do not reserve or deduct stock.
+- Persisted advisory analysis with a ten-minute cache and an explicit refresh action.
+- Camp, stock, volunteer, complaint, and restock-management screens.
+- A static scenario demo, clearly distinguished from live model inference.
+
+## Five-agent analysis
+
+| Agent | Responsibility | Explicit boundary |
+|---|---|---|
+| Flood Evidence | Summarizes supplied observed/forecast precipitation | Rainfall is not proof of inundation, flood depth, river level, or road flooding |
+| Health Triage Support | Identifies reported urgency signals and safe next steps | No diagnosis, outbreak probability, prescription, dosage, or replacement for a clinician |
+| Logistics Planning | Suggests relief items and compares them with camp inventory | No stock reservation, deduction, dispatch, or automatic restocking |
+| Route Information | Summarizes OSRM route distance and estimated duration | Does not verify road closures, passability, or vehicle suitability |
+| Resource Transparency | Explains whether a cost estimate can be supported | Costs remain unavailable without a verified price catalog; no invented prices |
+
+Each agent uses the configured Groq model through a server-only integration. Calls run concurrently. A failed agent is shown as failed; the application does not silently substitute fabricated output. The UI presents concise summaries and evidence, not hidden model reasoning.
+
+**Important:** the numeric queue score is calculated by deterministic application logic. It is not generated by an LLM, calibrated against historical outcomes, or a statistical percentile.
+
+## Technology
+
+- **Application:** Next.js 16 App Router, React 19, TypeScript
+- **Styling/UI:** Tailwind CSS 4, project components
+- **Database:** PostgreSQL (configured for Neon) with Prisma 6
+- **AI inference:** Groq OpenAI-compatible Chat Completions API
+- **Weather:** Open-Meteo
+- **Routing:** OSRM public routing service using OpenStreetMap road data
+- **Authentication:** application-managed sessions/JWT utilities and role checks
+- **Deployment target:** Vercel-compatible Next.js deployment
+
+See [docs/architecture.md](docs/architecture.md) and [docs/data-model.md](docs/data-model.md) for implementation details.
+
+## Quick start
+
+### Requirements
+
+- Node.js 20 or newer (use a version supported by the installed Next.js release)
+- npm
+- PostgreSQL database (Neon is the configured deployment target)
+- Groq API key for live AI analysis
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/Mzaq1559/RIPPLENET.git
+cd RIPPLENET
+npm install
+```
+
+### 2. Configure environment
+
+Create a local `.env` file using the checked-in template:
+
+```bash
+cp .env.example .env
+```
+
+Set the following values:
+
+| Variable | Required | Purpose |
+|---|---:|---|
+| `DATABASE_URL` | Yes | Pooled PostgreSQL connection used by application queries |
+| `DIRECT_URL` | Yes | Direct PostgreSQL connection used by Prisma schema operations |
+| `GROQ_API_KEY` | For live AI | Server-side Groq API key; never expose it to browser code |
+| `GROQ_MODEL` | No | Model override; defaults to `openai/gpt-oss-120b` |
+
+Do not commit `.env`, API keys, database credentials, or real citizen data.
+
+### 3. Apply the database schema
+
+```bash
+npx prisma generate
+npx prisma db push
+```
+
+Only run schema changes against the intended development database. **Do not run `npm run db:reset` against a database containing data you need to preserve.**
+
+### 4. Start the app
+
+```bash
+npm run dev
+```
+
+Open http://localhost:3000.
+
+### 5. Verify before a demo
+
+```bash
+npx eslint app/status/page.tsx app/queue/page.tsx
+npm run build
+```
+
+Then sign in with an authorized camp-manager account, open a real request, and confirm each agent's status, model, summary, and evidence. Test the explicit re-run action and verify that a page refresh reuses the saved analysis. A successful build does not prove that external API credentials or live integrations work.
+
+For full setup, troubleshooting, and deployment notes, see [docs/getting-started.md](docs/getting-started.md).
+
+## Main application areas
+
+| Area | Purpose |
 |---|---|
-| Frontend | Next.js (App Router), Tailwind CSS, shadcn/ui, React Query, React Hook Form + Zod, Leaflet/OSM maps, next-intl (i18n), next-pwa |
-| Backend | FastAPI (Python), SQLAlchemy (async) + Alembic |
-| Database | PostgreSQL + PostGIS (via Supabase free tier) |
-| Auth | Supabase Auth (JWT, role claims: admin/camp/volunteer) |
-| File storage | Supabase Storage (SOS videos, delivery proof photos) |
-| Background jobs | FastAPI BackgroundTasks (MVP) → Celery+Redis later |
-| ASR | Whisper (open-source, self-hosted or HF free inference) |
-| WhatsApp | WhatsApp Cloud API (Meta) free tier |
-| USSD | Africa's Talking sandbox (simulated for MVP demo) |
-| Routing | OSRM (self-hosted) or OpenRouteService free tier |
-| Satellite/rainfall | NASA GPM (free) + Sentinel Hub / Google Earth Engine (free nonprofit tier) |
-| Testing | Pytest + httpx.AsyncClient, GitHub Actions CI |
+| Public home / SOS | Citizen-facing entry point and request submission |
+| `/status` | Public request-status lookup; reads persisted operational data |
+| `/queue` | Camp request queue and triage overview |
+| `/queue/[id]` | Request details and live advisory analysis |
+| `/camps` | Camp directory/operations |
+| `/stock` | Camp inventory |
+| `/volunteers` | Volunteer overview |
+| `/volunteer/tasks` | Volunteer task list |
+| `/volunteer/tasks/[id]` | Assigned task detail; reads persisted AI analysis |
+| `/complaints` | Complaint workflow |
+| `/admin/*` | Administrative dashboard, camps, complaints, reports, and restocking |
 
-**MVP cuts for demo:** simulate USSD with a web form (no live carrier integration), use pre-loaded sample rainfall/flood data instead of live satellite feed, one camp + few demo volunteers instead of nationwide data.
+Routes and permissions may evolve during the hackathon; consult the current application code before integrating external clients.
 
----
+## Request and AI data flow
 
-## Database — core tables
-`users`, `victims`, `requests` (status enum: received → processing → pending_camp_review → assigned → in_transit → resolved, plus forwarded/escalated), `manifestos` (risk_driver, priority_effect, route_decision, allocation_decision, assigned_volunteer_id), `camps`, `warehouse_stock`, `volunteers`, `parcels`, `restock_requests`, `complaints`, `delivery_records`.
+1. A citizen request is submitted and persisted in PostgreSQL.
+2. A camp manager opens the request detail page.
+3. The server loads request context and obtains available weather, route, and stock evidence.
+4. The server runs the five specialized Groq calls concurrently.
+5. Agent output is normalized into bounded structured fields. Logistics inventory matching is performed locally against database records.
+6. The combined advisory result and evaluation timestamp are stored on the request.
+7. The camp manager reviews evidence and makes operational decisions. Volunteer task pages read the saved analysis rather than triggering another model run.
 
-## Auth model
-JWT with `role` claim (admin/camp/volunteer) + `camp_id` where relevant. Citizen ingestion routes are unauthenticated by design (no login barrier during emergency) but rate-limited. Role scoping: admin = system-wide read + approve only; camp = own camp_id only; volunteer = own assigned tasks only.
+The analysis cache lasts ten minutes. A manager can explicitly request a refresh. More detail is in [docs/ai-agent-runtime.md](docs/ai-agent-runtime.md).
 
-## API routes (~28 total, by module)
-- **Auth**: login, refresh, register (admin-only)
-- **Ingestion (public)**: submit-video, submit-ussd (webhook), submit-whatsapp (webhook), get-status
-- **Agent pipeline (internal)**: run-pipeline (background), get-manifesto
-- **Camp**: get-queue, accept-request, forward-request, assign-volunteer, get/update-stock, restock-request
-- **Volunteer**: get-tasks, update-task-status, resolve-task
-- **Admin**: overview, list/add-camps, restock-approvals, reports/export
-- **Complaints**: submit, list (role-scoped), resolve
+## Safety, privacy, and limitations
 
-## Frontend — pages by role (~20 total)
-- **Citizen** (public, no login): SOS channel picker, video SOS submission, status tracker
-- **Camp** (auth): login, incoming queue, request detail, volunteer roster, stock view, restock requests, complaints inbox
-- **Volunteer** (auth): login, assigned tasks, task detail (route map), mark resolved
-- **Admin** (auth): login, overview dashboard, camps management, restock approvals, complaints oversight, reports export
+RippleNet is a **hackathon prototype**, not a certified emergency-response, medical, dispatch, or public-safety system.
 
-## Design system
-- **Palette**: Ink Blue #0B3D5C (primary/trust), Channel Blue #0E5A8A (links/secondary), Signal Amber #E8A33D (urgency/pending — used instead of red to avoid panic), Critical Terracotta #C1440E (reserved only for severity 9–10), Resolved Teal #2E7D6B (success), Paper #F7F6F2 (background)
-- **Type**: Sora (display/headings), Inter (body/UI), Inter tabular-nums (data/scores)
-- **Signature component**: the four-header Justification Block, styled consistently everywhere it appears
-- **Shared components**: StatusBadge, SeverityMeter, JustificationBlock, ContactCard, RouteMap, ParcelList, RequestQueueRow, ComplaintCard, Primary/SecondaryButton, BottomNav, EmptyState, LanguageSwitcher
-- Mobile-first (375px baseline), 44px min tap targets, offline-first PWA shell for citizen pages, colorblind-safe (color+label pairing), 5-language support (Urdu, Punjabi, Sindhi, Pashto, Balochi) + English
+- AI output is advisory and must be reviewed by a human.
+- Clinical concerns require qualified medical assessment.
+- The numeric triage score is a transparent heuristic, not a validated risk model.
+- Rainfall and routing data have source, coverage, and freshness limitations.
+- OSRM ETA does not establish that roads are safe or passable during a flood.
+- Inventory suggestions do not reserve or deduct stock.
+- Costs are not estimated without a verified price source.
+- The AI prompt excludes several direct identifiers and redacts common email, phone, and coordinate patterns in reported-needs text. This is not a guarantee of anonymization; free text can still contain personal or sensitive information.
+- Do not use real emergency or patient data in a public demo without appropriate authorization, privacy controls, and provider review.
 
-## Suggested build order
-1. Database schema (Supabase/Postgres)
-2. Auth (roles)
-3. One ingestion path first (video SOS only)
-4. Agent pipeline with mocked/sample data (not live satellite yet)
-5. Camp dashboard (queue, accept/forward)
-6. Volunteer flow (tasks, resolve)
-7. Citizen status tracker
-8. Admin overview last
-9. Real USSD/WhatsApp/satellite integration only if time remains
+See [docs/ai-agent-runtime.md](docs/ai-agent-runtime.md) for the detailed data-handling description and [docs/demo-guide.md](docs/demo-guide.md) for a safe demo checklist.
 
----
+## Repository documentation
 
-*This document consolidates all decisions made across planning sessions and can be pasted into other AI tools as full project context.*
+- [Documentation index](docs/README.md)
+- [Architecture and diagram](docs/architecture.md)
+- [Getting started and deployment](docs/getting-started.md)
+- [AI agents and runtime behavior](docs/ai-agent-runtime.md)
+- [API surface](docs/api-reference.md)
+- [Database model](docs/data-model.md)
+- [Hackathon demo guide](docs/demo-guide.md)
+- [Third-party component/service catalog](docs/component-and-service-catalog.md)
+- [Agent ecosystem and coding-agent workflow](docs/agent-ecosystem.md)
 
+## Development scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start local Next.js development server |
+| `npm run build` | Generate Prisma Client and create production build |
+| `npm run start` | Start the production server |
+| `npm run lint` | Run ESLint |
+| `npm run db:push` | Apply Prisma schema to the configured database |
+| `npm run db:seed` | Run the database seed script |
+| `npm run db:reset` | Destructive schema push + seed; use only on disposable data |
+
+## License
+
+This project is released under the [MIT License](LICENSE). Third-party assets and dependencies remain subject to their own licenses and notices; see [THIRD_PARTY.md](THIRD_PARTY.md).
