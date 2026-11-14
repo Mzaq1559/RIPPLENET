@@ -124,7 +124,7 @@ export default async function RequestDetailsPage(props: {
     : rawRefreshAnalysis === "1";
   const numeric = Number(id);
   const decodedId = decodeURIComponent(id).trim();
-  let request: any = await prisma.request.findFirst({
+  const request = await prisma.request.findFirst({
     where: {
       OR: [
         ...(Number.isFinite(numeric) && /^\d+$/.test(decodedId) ? [{ id: numeric }] : []),
@@ -235,10 +235,9 @@ export default async function RequestDetailsPage(props: {
     }
   }
 
+  // Reuse the persisted analysis until a camp manager explicitly requests a refresh.
   const analysisIsFresh =
-    !forceAnalysisRefresh &&
-    request.agentAnalysisAt instanceof Date &&
-    Date.now() - request.agentAnalysisAt.getTime() < 10 * 60 * 1000;
+    !forceAnalysisRefresh && request.agentAnalysisAt instanceof Date;
   let pipeline: LiveMultiAgentPipelineResult | null = null;
 
   if (analysisIsFresh && typeof request.agentAnalysis === "string") {
