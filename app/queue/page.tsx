@@ -63,14 +63,13 @@ export default async function QueuePage(props: {
   const items = sortQueueItems(requests.map((r) => {
     const needs = parseNeeds(r.needs);
     const risk = assessRisk({ priority: r.priority, type: r.type, peopleCount: r.peopleCount, needs });
-    const createdDate = r.createdAt instanceof Date ? r.createdAt : new Date(r.createdAt || Date.now());
     return {
       code: r.code,
       name: r.citizenName,
       location: r.location ?? `${r.district} District`,
       issues: needs.slice(0, 2).join(", ") || "Relief delivery",
       status: r.status,
-      createdAt: createdDate.toISOString(),
+      createdAt: r.createdAt.toISOString(),
       score: risk.score,
       level: risk.level,
       levelColor: risk.levelColor,
