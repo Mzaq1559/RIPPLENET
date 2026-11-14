@@ -70,12 +70,13 @@ export interface LogisticsAgentResult {
 
 export interface RouteAgentResult {
   agentName: "Route Agent";
-  role: "Identifies safest delivery routes & computes detour delays";
-  safeRouteFound: boolean;
-  distanceKm: number;
-  durationMin: number;
+  role: "Reports OSRM route data when available; road passability is not verified";
+  routeFound: boolean;
+  passabilityVerified: false;
+  distanceKm: number | null;
+  durationMin: number | null;
   viaRoadName: string | null;
-  roadPassability: "Fully Open" | "Caution: Waterlogged Detour" | "Impassable: Boat Required";
+  roadPassability: "Not verified";
   hazards: string[];
   recommendedVehicle: "4x4 Relief Truck" | "Motorboat / Dinghy" | "All-Terrain Motorbike" | "Foot Patrol with Lifejackets";
   thoughts: AgentThought[];
@@ -84,11 +85,10 @@ export interface RouteAgentResult {
 
 export interface ResourceAgentResult {
   agentName: "Resource Agent";
-  role: "Optimizes relief budget, per-beneficiary cost & prevents aid waste";
+  role: "Estimates relief parcel and per-person costs";
   estimatedCostPkr: number;
   costPerPersonPkr: number;
-  budgetEfficiencyScore: number; // 0-100%
-  fundWasteRisk: "Zero / Verified" | "Low Risk" | "Audit Required";
+  fundWasteRisk: "Not assessed";
   economicVerdict: string;
   thoughts: AgentThought[];
   verdict: string;
@@ -379,104 +379,106 @@ export function runMultiAgentPipeline(params: {
   };
 
   // 4. 🗺️ Route Agent
-  const distKm = params.routeDistanceKm ?? 8.4;
-  const durMin = params.routeDurationMin ?? 22;
-  const viaName =
-    params.routeVia ??
-    (params.district.toLowerCase() === "rawalpindi"
-      ? "Murree Road / GT Relief Bypass"
-      : params.district.toLowerCase() === "islamabad"
-      ? "Expressway - I-8 Relief Corridor"
-      : params.district.toLowerCase() === "lahore"
-      ? "Ferozepur Road Relief Corridor"
-      : params.district.toLowerCase() === "nowshera"
-      ? "GT Road - Kabul River Bypass"
-      : params.district.toLowerCase() === "badin"
-      ? "Talhar - Badin Link Road"
-      : `${params.district} Relief Highway Bypass`);
-  const vehicle = isRescue ? "Motorboat / Dinghy" : distKm > 15 ? "4x4 Relief Truck" : "All-Terrain Motorbike";
+  const distKm = params.routeDistanceKm ?? null;
+  const durMin = params.routeDurationMin ?? null;
+  const viaName = params.routeVia ?? null;
+  const routeFound = distKm !== null;
+  const vehicle = isRescue ? "Motorboat / Dinghy" : distKm !== null && distKm > 15 ? "4x4 Relief Truck" : "All-Terrain Motorbike";
+  const routeSummary = routeFound
+    ? `OSRM route used: ${distKm} km${durMin !== null ? `, ${durMin} min ETA` : ""}${viaName ? ` via ${viaName}` : ""}. Road passability is not verified.`
+    : "Route data unavailable. Road passability is not verified.";
+  const routeHazards =
+    (params.rainfall24h != null && params.rainfall24h > 35) || (params.currentRainfallRate != null && params.currentRainfallRate > 2)
+      ? [
+          params.rainfall24h != null && params.rainfall24h > 35
+            ? `Heavy rain reported by Open-Meteo (${params.rainfall24h.toFixed(1)} mm in 24h); road conditions not verified`
+            : `Heavy rain reported by Open-Meteo (current rate ${params.currentRainfallRate?.toFixed(1)} mm/h); road conditions not verified`,
+        ]
+      : [];
 
   const routeThoughts: AgentThought[] = [
     {
       step: 1,
       agent: "route",
-      title: "Road Network & Inundation Overlay",
-      detail: `Queried OSRM road geometry. Inspected bypass elevation for ${params.district}.`,
+      title: "OSRM Route Lookup",
+      detail: routeFound
+        ? `OSRM route used: ${distKm} km${durMin !== null ? `, ${durMin} min ETA` : ""}${viaName ? ` via ${viaName}` : ""}.`
+        : "Route data unavailable.",
       timestamp: timeStr,
     },
     {
       step: 2,
       agent: "route",
-      title: "Hazard Detection & Detour Optimization",
-      detail: `Avoided low-lying culvert bottleneck. Safest path selected via ${viaName}.`,
+      title: "Road Passability Status",
+      detail: "Road passability is not verified; no live road-flood data is available.",
       timestamp: timeStr,
     },
     {
       step: 3,
       agent: "route",
-      title: "ETA & Vehicle Dispatch Recommendation",
-      detail: `Total distance: ${distKm} km · Estimated transit time: ${durMin} min · Mode: ${vehicle}.`,
+      title: "Vehicle Recommendation",
+      detail: `Recommended vehicle: ${vehicle}.`,
       timestamp: timeStr,
     },
   ];
 
   const routeAgent: RouteAgentResult = {
     agentName: "Route Agent",
-    role: "Identifies safest delivery routes & computes detour delays",
-    safeRouteFound: true,
+    role: "Reports OSRM route data when available; road passability is not verified",
+    routeFound,
+    passabilityVerified: false,
     distanceKm: distKm,
     durationMin: durMin,
     viaRoadName: viaName,
-    roadPassability: distKm > 10 ? "Caution: Waterlogged Detour" : "Fully Open",
-    hazards: ["Culvert bottleneck at km 4.2", "Reduced traction on unpaved shoulders"],
+    roadPassability: "Not verified",
+    hazards: routeHazards,
     recommendedVehicle: vehicle,
     thoughts: routeThoughts,
-    verdict: `${distKm} km via ${viaName} (${durMin} min ETA) using ${vehicle}.`,
+    verdict: routeSummary,
   };
 
   // 5. 💰 Resource Agent
-  const kitCost = 2800; // RippleNet Kit cost in PKR
-  const medicalCost = 900;
-  const foodCost = 1400 * Math.ceil(people / 4);
-  const fuelCost = Math.round(distKm * 45);
+  const kitCost = 2800; // Placeholder unit price in PKR
+  const medicalCost = 900; // Placeholder unit price in PKR
+  const foodCost = 1400 * Math.ceil(people / 4); // Placeholder unit price in PKR
+  const fuelCost = distKm === null ? 0 : Math.round(distKm * 45); // Placeholder per-kilometre fuel price
   const totalCostPkr = kitCost + medicalCost + foodCost + fuelCost;
   const costPerPerson = Math.round(totalCostPkr / people);
-  const efficiencyScore = Math.min(99, Math.max(85, 100 - Math.round(distKm * 0.4)));
+  const resourceEstimateSentence = `Estimated cost: PKR ${totalCostPkr.toLocaleString()} (PKR ${costPerPerson.toLocaleString()} per person), based on placeholder unit prices${distKm === null ? "; fuel estimate omitted because route distance is unavailable." : ", including a placeholder fuel estimate"}.`;
 
   const resourceThoughts: AgentThought[] = [
     {
       step: 1,
       agent: "resource",
-      title: "Relief Parcel Valuation & Itemized Costing",
-      detail: `Evaluated supply parcel value: PKR ${totalCostPkr.toLocaleString()} (including medicines, water supplies & fuel).`,
+      title: "Placeholder Unit-Price Estimate",
+      detail: resourceEstimateSentence,
       timestamp: timeStr,
     },
     {
       step: 2,
       agent: "resource",
-      title: "Cost Per Beneficiary Optimization",
-      detail: `Servicing ${people} beneficiary(ies) at PKR ${costPerPerson.toLocaleString()} per person. Zero duplicate waste detected.`,
+      title: "Per-Person Cost Estimate",
+      detail: `Estimated cost per person for ${people} people: PKR ${costPerPerson.toLocaleString()}.`,
       timestamp: timeStr,
     },
     {
       step: 3,
       agent: "resource",
-      title: "Budget Efficiency Rating",
-      detail: `Awarded ${efficiencyScore}% budget optimization score. High ROI humanitarian impact rating.`,
+      title: "Assessment Scope",
+      detail: "Only a cost estimate is provided; no budget audit is included.",
       timestamp: timeStr,
     },
   ];
 
   const resourceAgent: ResourceAgentResult = {
     agentName: "Resource Agent",
-    role: "Optimizes relief budget, per-beneficiary cost & prevents aid waste",
+    role: "Estimates relief parcel and per-person costs",
     estimatedCostPkr: totalCostPkr,
     costPerPersonPkr: costPerPerson,
-    budgetEfficiencyScore: efficiencyScore,
-    fundWasteRisk: "Zero / Verified",
-    economicVerdict: `High efficiency (PKR ${costPerPerson.toLocaleString()}/person, ${efficiencyScore}% efficiency).`,
+    fundWasteRisk: "Not assessed",
+    economicVerdict: resourceEstimateSentence,
     thoughts: resourceThoughts,
-    verdict: `PKR ${totalCostPkr.toLocaleString()} total cost · PKR ${costPerPerson.toLocaleString()}/person · ${efficiencyScore}% efficiency score.`,
+    verdict: resourceEstimateSentence,
   };
 
   // Overall Risk Score synthesis
@@ -504,13 +506,13 @@ export function runMultiAgentPipeline(params: {
     routeAgent,
     resourceAgent,
     justificationBlock: {
-      riskDriver: `${params.priority.toUpperCase()} priority flood SOS with ${people} victim(s) in ${params.district}. Reported needs: ${needs.slice(0, 2).join(", ") || "Urgent Relief"} with severe diarrheal/pathogen risks.`,
-      priorityEffect: `Risk score ${riskAssessment.score.toFixed(1)}/10 places this request in the ${percentile} urgency bracket nationwide — immediate camp dispatch authorized.`,
-      routeDecision: `Safe route identified via ${viaName} (${distKm} km, ~${durMin} min ETA) using ${vehicle} to bypass submerged canal crossings.`,
+      riskDriver: `${params.priority.toUpperCase()} priority request affecting ${people} people in ${params.district}. Reported needs: ${needs.slice(0, 2).join(", ") || "No needs listed"}.${healthAgent.detectedOutcomes.length > 0 ? ` Health Agent flagged: ${healthAgent.detectedOutcomes.map((outcome) => outcome.disease).join(", ")}.` : ""}`,
+      priorityEffect: `Risk score ${riskAssessment.score.toFixed(1)}/10; percentile: ${percentile}.${riskAssessment.score >= 8 ? " Recommended for immediate attention." : ""}`,
+      routeDecision: routeSummary,
       allocationDecision: stockCeilingVerified
         ? `All ${allocatedItems.length} parcel items confirmed in camp stock.`
         : `Parcel stock result: ${stockAlert ?? "Stock could not be verified."}`,
-      resourceEfficiency: `Cost optimized at PKR ${costPerPerson.toLocaleString()}/beneficiary (${efficiencyScore}% efficiency rating). Zero resource duplication.`,
+      resourceEfficiency: resourceEstimateSentence,
     },
   };
 }

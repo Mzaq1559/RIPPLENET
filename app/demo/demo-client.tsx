@@ -355,7 +355,7 @@ export function DemoClient() {
                 </div>
                 <div className="rounded-2xl bg-emerald-50 p-3 text-[11.5px]">
                   <p className="font-bold text-emerald-700 uppercase tracking-wide text-[9.5px]">
-                    3. Logistics Allocation (Relief Parcel Verified)
+                    3. Logistics Allocation (Camp Stock Check)
                   </p>
                   <p className="mt-1 text-slate-700">{pipeline.justificationBlock.allocationDecision}</p>
                 </div>
@@ -442,7 +442,7 @@ export function DemoClient() {
                   <div className="rounded-2xl bg-emerald-50 p-4 text-center">
                     <p className="font-display text-[15px] font-bold text-emerald-700">Delivery Resolved!</p>
                     <p className="mt-1 text-[11.5px] text-slate-600">
-                      Stock deducted, beneficiary safe, relief record permanently logged.
+                      Sandbox only: no stock was deducted and no record was saved.
                     </p>
                   </div>
                 )}
@@ -458,7 +458,7 @@ export function DemoClient() {
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
                   <h3 className="font-display text-[16px] font-bold text-ink">Global Admin Oversight</h3>
-                  <p className="text-[11.5px] text-slate-500">Autonomous Telemetry &amp; Resource Efficiency</p>
+                  <p className="text-[11.5px] text-slate-500">Sandbox Summary &amp; Cost Estimate</p>
                 </div>
                 <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-700">
                   Mission Success
@@ -473,22 +473,22 @@ export function DemoClient() {
                   </p>
                 </div>
                 <div className="rounded-2xl bg-emerald-50 p-3">
-                  <p className="text-[10px] font-bold uppercase text-emerald-600">Budget Efficiency</p>
+                  <p className="text-[10px] font-bold uppercase text-emerald-600">Est. Cost Per Person</p>
                   <p className="mt-1 font-display text-[20px] font-extrabold text-ink">
-                    {pipeline.resourceAgent.budgetEfficiencyScore}%
+                    PKR {pipeline.resourceAgent.costPerPersonPkr.toLocaleString()}
                   </p>
                 </div>
               </div>
 
               <div className="mt-4 rounded-2xl bg-slate-50 p-3.5 text-[12px] space-y-1 text-slate-600">
                 <p>
-                  <span className="font-bold text-ink">Resource Agent Audit:</span> PKR{" "}
-                  {pipeline.resourceAgent.estimatedCostPkr.toLocaleString()} expended across{" "}
+                  <span className="font-bold text-ink">Resource Agent Estimate:</span> PKR{" "}
+                  {pipeline.resourceAgent.estimatedCostPkr.toLocaleString()} estimated across{" "}
                   {selectedScenario.peopleCount} people (PKR {pipeline.resourceAgent.costPerPersonPkr.toLocaleString()}/person).
                 </p>
                 <p>
-                  <span className="font-bold text-ink">Health Agent Audit:</span> Diarrheal/cholera outbreak contained using{" "}
-                  safe drinking water &amp; oral rehydration therapy.
+                  <span className="font-bold text-ink">Health Agent note:</span> The pipeline flagged outbreak risk for this scenario.{" "}
+                  Medication and dosing advice require clinician review.
                 </p>
               </div>
 

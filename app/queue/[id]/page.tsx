@@ -294,7 +294,7 @@ export default async function RequestDetailsPage(props: { params: Promise<{ id: 
     lng: request.lng,
     campName: camp?.name ?? "Alkhidmat Camp",
     volunteerName: request.volunteer?.name,
-    routeDistanceKm: distanceKm,
+    routeDistanceKm: route?.distanceKm ?? null,
     routeDurationMin: etaMin,
     routeVia: route?.viaName,
     rainfall24h: liveRainfall.last24hMm,
@@ -455,17 +455,16 @@ export default async function RequestDetailsPage(props: { params: Promise<{ id: 
               <div className="mt-1.5 space-y-1 text-[12px] leading-[1.55] text-slate-600">
                 <p className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" />
-                  {route?.viaName
-                    ? `Route via ${route.viaName}`
-                    : `Direct route from ${camp?.district ?? "camp"} camp`}
-                </p>
-                <p className="flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" />
-                  {distanceKm != null ? `${distanceKm} km road distance from camp` : "Distance unavailable"}
+                  {pipeline.routeAgent.routeFound
+                    ? `OSRM route: ${pipeline.routeAgent.distanceKm} km${pipeline.routeAgent.viaRoadName ? ` via ${pipeline.routeAgent.viaRoadName}` : ""}`
+                    : "Route data unavailable"}
                 </p>
                 <p className="pt-0.5 font-bold text-sky-700">
-                  {etaMin != null ? `ETA: ${etaMin} min · Mode: ${pipeline.routeAgent.recommendedVehicle}` : "ETA pending route data"}
+                  {pipeline.routeAgent.durationMin != null
+                    ? `ETA: ${pipeline.routeAgent.durationMin} min · Mode: ${pipeline.routeAgent.recommendedVehicle}`
+                    : `Recommended mode: ${pipeline.routeAgent.recommendedVehicle}`}
                 </p>
+                <p className="text-[11px] text-slate-500">Road passability is not verified.</p>
               </div>
             </div>
 
@@ -493,11 +492,10 @@ export default async function RequestDetailsPage(props: { params: Promise<{ id: 
 
             <div className="rounded-2xl border border-teal-100 bg-teal-50 p-3.5">
               <p className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-teal-600">
-                5. Resource Agent Budget Optimization
+                5. Resource Agent Cost Estimate
               </p>
               <p className="mt-1.5 text-[12px] leading-[1.55] text-slate-600">
-                Estimated parcel value: <span className="font-semibold text-ink">PKR {pipeline.resourceAgent.estimatedCostPkr.toLocaleString()}</span> (PKR {pipeline.resourceAgent.costPerPersonPkr.toLocaleString()}/person) with a{" "}
-                <span className="font-semibold text-teal-700">{pipeline.resourceAgent.budgetEfficiencyScore}% aid efficiency rating</span>.
+                {pipeline.resourceAgent.economicVerdict}
               </p>
             </div>
           </div>

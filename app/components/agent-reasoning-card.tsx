@@ -62,6 +62,7 @@ export function AgentReasoningCard({
   const needsStr = (pipeline.needs ?? ["Emergency relief"]).join(", ");
   const rainVal = pipeline.floodRainfall ?? 85.4;
   const { floodAgent, healthAgent, logisticsAgent, routeAgent, resourceAgent } = pipeline;
+  const routeSummary = routeAgent.verdict;
 
   // Distinct definitions and behaviors for all 5 AI Agents
   const agentDefs: Record<AgentType, AgentRoleDefinition> = useMemo(
@@ -177,8 +178,10 @@ export function AgentReasoningCard({
       route: {
         type: "route",
         title: "Route Agent",
-        roleSubtitle: "Dynamic OSRM Safe Corridors & Detour Navigation",
-        badgeLabel: `${routeAgent.durationMin} Min ETA`,
+        roleSubtitle: "OSRM Route Data & Unverified Road Passability",
+        badgeLabel: routeAgent.routeFound
+          ? routeAgent.durationMin !== null ? `${routeAgent.durationMin} Min ETA` : `${routeAgent.distanceKm} km`
+          : "Route data unavailable",
         icon: IconRouteAgent,
         themeColor: {
           bg: "bg-violet-50",
@@ -189,32 +192,32 @@ export function AgentReasoningCard({
         },
         stages: {
           monitoring: {
-            actionTitle: "Querying Road Network Geometry",
-            description: `Ingesting destination coordinates and querying live OSRM road network geometry between camp and ${district}...`,
-            terminalLog: `[ROUTE-01] 📡 MONITORING: Querying live OSRM routing engine. Origin: Base Camp -> Destination: ${district}.`,
+            actionTitle: "OSRM Route Lookup",
+            description: routeSummary,
+            terminalLog: `[ROUTE-01] 📡 MONITORING: ${routeSummary}`,
           },
           thinking: {
-            actionTitle: "Detecting Flooded Road Hazards",
-            description: `Cross-referencing Flood Agent inundation zones against road segments. Detecting culvert washouts and impassable bridge crossings...`,
-            terminalLog: `[ROUTE-02] 🧠 THINKING: Inundation overlay check. Avoiding primary road cut. Identifying elevated bypass corridor via ${routeAgent.viaRoadName}.`,
+            actionTitle: "Road Passability Status",
+            description: "Road passability is not verified; no live road-flood data is available.",
+            terminalLog: "[ROUTE-02] 🧠 THINKING: Road passability is not verified.",
           },
           working: {
-            actionTitle: "Optimizing Transit ETA & Vehicle Mode",
-            description: `Computing dynamic safe bypass corridor via ${routeAgent.viaRoadName}. Calculating road traction coefficient and detour delay (${routeAgent.durationMin} min ETA)...`,
-            terminalLog: `[ROUTE-03] ⚙️ WORKING: Distance: ${routeAgent.distanceKm} km. Calculating ETA: ~${routeAgent.durationMin} min. Recommended vehicle mode: ${routeAgent.recommendedVehicle}.`,
+            actionTitle: "Vehicle Recommendation",
+            description: `Recommended vehicle: ${routeAgent.recommendedVehicle}.`,
+            terminalLog: `[ROUTE-03] ⚙️ WORKING: Recommended vehicle: ${routeAgent.recommendedVehicle}.`,
           },
           decision_made: {
-            actionTitle: "Safe Navigation Path Approved",
-            description: routeAgent.verdict,
-            terminalLog: `[ROUTE-04] ✅ DECISION: Safe navigation route locked via ${routeAgent.viaRoadName}. Turn-by-turn vectors transmitted to volunteer mobile portal.`,
+            actionTitle: "Route Data Summary",
+            description: routeSummary,
+            terminalLog: `[ROUTE-04] ✅ DECISION: ${routeSummary}`,
           },
         },
       },
       resource: {
         type: "resource",
         title: "Resource Agent",
-        roleSubtitle: "Budget Optimization, Per-Person Cost & Aid ROI",
-        badgeLabel: `${resourceAgent.budgetEfficiencyScore}% Efficiency`,
+        roleSubtitle: "Estimated Parcel & Per-Person Costs",
+        badgeLabel: resourceAgent.fundWasteRisk,
         icon: IconResourceAgent,
         themeColor: {
           bg: "bg-emerald-50",
@@ -225,24 +228,24 @@ export function AgentReasoningCard({
         },
         stages: {
           monitoring: {
-            actionTitle: "Auditing Supply Costs & Fuel Transit",
-            description: `Auditing emergency relief parcel unit costs, fuel consumption rates, and volunteer transit expenditure...`,
-            terminalLog: `[RESOURCE-01] 📡 MONITORING: Auditing bill of materials for relief parcel, mileage fuel overhead, and camp operational budget.`,
+            actionTitle: "Reviewing Placeholder Unit Prices",
+            description: resourceAgent.economicVerdict,
+            terminalLog: `[RESOURCE-01] 📡 MONITORING: ${resourceAgent.economicVerdict}`,
           },
           thinking: {
-            actionTitle: "Evaluating Cost-per-Beneficiary Curve",
-            description: `Analyzing cost efficiency curve for ${pipeline.overallScore > 0 ? "affected beneficiaries" : "victims"}. Cross-checking district database for duplicate aid disbursement...`,
-            terminalLog: `[RESOURCE-02] 🧠 THINKING: Calculating per-capita aid efficiency. Checking historical disbursements to prevent duplicate aid claims.`,
+            actionTitle: "Calculating Per-Person Estimate",
+            description: "The current estimate uses placeholder unit prices; no budget audit is included.",
+            terminalLog: "[RESOURCE-02] 🧠 THINKING: This output is a cost estimate, not a budget audit.",
           },
           working: {
-            actionTitle: "Calculating Aid ROI Score",
-            description: `Calculating itemized total: PKR ${resourceAgent.estimatedCostPkr.toLocaleString()} (PKR ${resourceAgent.costPerPersonPkr.toLocaleString()}/person). Computing humanitarian aid ROI efficiency score...`,
-            terminalLog: `[RESOURCE-03] ⚙️ WORKING: Total parcel valuation: PKR ${resourceAgent.estimatedCostPkr.toLocaleString()} (PKR ${resourceAgent.costPerPersonPkr.toLocaleString()}/beneficiary). Efficiency rating: ${resourceAgent.budgetEfficiencyScore}%.`,
+            actionTitle: "Preparing Cost Estimate",
+            description: resourceAgent.economicVerdict,
+            terminalLog: `[RESOURCE-03] ⚙️ WORKING: ${resourceAgent.economicVerdict}`,
           },
           decision_made: {
-            actionTitle: "Budget Optimization Certified",
+            actionTitle: "Cost Estimate Issued",
             description: resourceAgent.verdict,
-            terminalLog: `[RESOURCE-04] ✅ DECISION: Budget efficiency certified at ${resourceAgent.budgetEfficiencyScore}%. Zero duplicate waste detected.`,
+            terminalLog: `[RESOURCE-04] ✅ DECISION: ${resourceAgent.verdict}`,
           },
         },
       },
