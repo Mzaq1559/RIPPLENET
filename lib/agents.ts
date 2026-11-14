@@ -12,7 +12,7 @@ export interface AgentThought {
 
 export interface FloodAgentResult {
   agentName: "Flood Agent";
-  role: "Predicts flood severity & surface water accumulation";
+  role: string;
   severityScore: number; // 1-10
   severityLevel: "Low" | "Moderate" | "High" | "Extreme";
   rainfall24hMm: number;
@@ -27,7 +27,7 @@ export interface FloodAgentResult {
 
 export interface HealthAgentResult {
   agentName: "Health Agent";
-  role: "Predicts diarrheal outbreaks, infectious diseases & clinical triage";
+  role: string;
   outbreakRiskTier: "Primary" | "Secondary" | "Monitored";
   outbreakSignal: boolean;
   detectedOutcomes: {
@@ -70,7 +70,7 @@ export interface LogisticsAgentResult {
 
 export interface RouteAgentResult {
   agentName: "Route Agent";
-  role: "Reports OSRM route data when available; road passability is not verified";
+  role: string;
   routeFound: boolean;
   passabilityVerified: false;
   distanceKm: number | null;
@@ -85,7 +85,7 @@ export interface RouteAgentResult {
 
 export interface ResourceAgentResult {
   agentName: "Resource Agent";
-  role: "Estimates relief parcel and per-person costs";
+  role: string;
   estimatedCostPkr: number;
   costPerPersonPkr: number;
   fundWasteRisk: "Not assessed";
