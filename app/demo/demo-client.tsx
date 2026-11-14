@@ -27,7 +27,7 @@ import {
   IconChevronRight,
   IconHome,
 } from "../components/icons";
-import { runMultiAgentPipeline, type MultiAgentPipelineResult } from "../../lib/agents";
+import { runDemoPipelinePreview, type MultiAgentPipelineResult } from "../../lib/agents";
 import { AgentReasoningCard } from "../components/agent-reasoning-card";
 
 interface DemoScenario {
@@ -92,7 +92,7 @@ export function DemoClient() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [agentStep, setAgentStep] = useState(0);
   const [pipeline, setPipeline] = useState<MultiAgentPipelineResult>(() =>
-    runMultiAgentPipeline({
+    runDemoPipelinePreview({
       requestId: "RIP-DEMO-001",
       citizenName: DEMO_SCENARIOS[0].citizenName,
       needs: DEMO_SCENARIOS[0].needs,
@@ -114,7 +114,7 @@ export function DemoClient() {
   const selectScenario = (s: DemoScenario) => {
     setSelectedScenario(s);
     setDeliveryStatus("pending");
-    const newPipeline = runMultiAgentPipeline({
+    const newPipeline = runDemoPipelinePreview({
       requestId: `RIP-DEMO-${s.id.toUpperCase().slice(0, 4)}`,
       citizenName: s.citizenName,
       needs: s.needs,
@@ -160,14 +160,14 @@ export function DemoClient() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-display text-[18px] font-extrabold tracking-tight text-ink">
-                RippleNet AI Interactive Sandbox
+                RippleNet Scenario Sandbox
               </h1>
               <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-cyan-800">
-                Live Demo
+                Simulation
               </span>
             </div>
             <p className="text-[12px] font-medium text-slate-500">
-              Test end-to-end flood response powered by 5 AI Agents
+              Explore the response workflow using sample scenarios
             </p>
           </div>
         </div>
@@ -242,7 +242,7 @@ export function DemoClient() {
         <div className="mt-3 grid grid-cols-5 gap-1">
           {[
             { s: 1, label: "1. SOS Ingestion" },
-            { s: 2, label: "2. 5 AI Agents" },
+            { s: 2, label: "2. 5 Agent Preview" },
             { s: 3, label: "3. Camp Triage" },
             { s: 4, label: "4. Volunteer" },
             { s: 5, label: "5. Admin Radar" },
@@ -305,7 +305,7 @@ export function DemoClient() {
               className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-ink text-[13.5px] font-bold text-white shadow-lg shadow-ink/25 transition active:scale-[0.98]"
             >
               <IconZap className="h-4 w-4 text-cyan-pop" />
-              Run 5 AI Agents Pipeline
+              Run 5 Agent Preview Pipeline
               <IconArrowRight className="h-4 w-4" />
             </button>
           </div>
@@ -336,7 +336,7 @@ export function DemoClient() {
                   <h3 className="font-display text-[16px] font-bold text-ink">
                     {selectedScenario.district} Health Camp Queue
                   </h3>
-                  <p className="text-[11.5px] text-slate-500">Autonomous ranked deployment order</p>
+                  <p className="text-[11.5px] text-slate-500">Illustrative deployment preview</p>
                 </div>
                 <span className="rounded-full bg-rose-100 px-2.5 py-1 text-[10px] font-bold text-rose-700">
                   Risk Score {pipeline.overallScore.toFixed(1)}/10
@@ -451,44 +451,42 @@ export function DemoClient() {
           </div>
         )}
 
-        {/* Step 5: Admin Radar & Telemetry */}
+        {/* Step 5: Admin Overview Preview */}
         {step === 5 && (
           <div className="space-y-4">
             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
-                  <h3 className="font-display text-[16px] font-bold text-ink">Global Admin Oversight</h3>
-                  <p className="text-[11.5px] text-slate-500">Sandbox Summary &amp; Cost Estimate</p>
+                  <h3 className="font-display text-[16px] font-bold text-ink">Admin Oversight Preview</h3>
+                  <p className="text-[11.5px] text-slate-500">Sample Scenario Summary</p>
                 </div>
                 <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-700">
-                  Mission Success
+                  Simulation Complete
                 </span>
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-2.5 text-center">
                 <div className="rounded-2xl bg-sky-50 p-3">
-                  <p className="text-[10px] font-bold uppercase text-sky-600">Total Beneficiaries</p>
+                  <p className="text-[10px] font-bold uppercase text-sky-600">People in Scenario</p>
                   <p className="mt-1 font-display text-[20px] font-extrabold text-ink">
-                    {selectedScenario.peopleCount} Helped
+                    {selectedScenario.peopleCount} people
                   </p>
                 </div>
                 <div className="rounded-2xl bg-emerald-50 p-3">
-                  <p className="text-[10px] font-bold uppercase text-emerald-600">Est. Cost Per Person</p>
+                  <p className="text-[10px] font-bold uppercase text-emerald-600">Verified Cost Data</p>
                   <p className="mt-1 font-display text-[20px] font-extrabold text-ink">
-                    PKR {pipeline.resourceAgent.costPerPersonPkr.toLocaleString()}
+                    Unavailable
                   </p>
                 </div>
               </div>
 
               <div className="mt-4 rounded-2xl bg-slate-50 p-3.5 text-[12px] space-y-1 text-slate-600">
                 <p>
-                  <span className="font-bold text-ink">Resource Agent Estimate:</span> PKR{" "}
-                  {pipeline.resourceAgent.estimatedCostPkr.toLocaleString()} estimated across{" "}
-                  {selectedScenario.peopleCount} people (PKR {pipeline.resourceAgent.costPerPersonPkr.toLocaleString()}/person).
+                  <span className="font-bold text-ink">Resource Agent:</span>{" "}
+                  {pipeline.resourceAgent.economicVerdict}
                 </p>
                 <p>
-                  <span className="font-bold text-ink">Health Agent note:</span> The pipeline flagged outbreak risk for this scenario.{" "}
-                  Medication and dosing advice require clinician review.
+                  <span className="font-bold text-ink">Health Agent note:</span> This static preview does not diagnose or estimate outbreak risk. Reported symptoms require qualified clinician review.
                 </p>
               </div>
 

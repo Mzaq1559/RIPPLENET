@@ -62,6 +62,8 @@ model Request {
   startedAt   DateTime?
   resolvedAt  DateTime?
   resolution  String? // JSON of resolve payload
+  agentAnalysis String? // Cached advisory AI analysis JSON
+  agentAnalysisAt DateTime?
   createdAt   DateTime  @default(now())
 }
 
