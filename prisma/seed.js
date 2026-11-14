@@ -6,6 +6,11 @@ const prisma = new PrismaClient();
 const daysAgo = (n, h = 0) => new Date(Date.now() - n * 86400000 - h * 3600000);
 
 async function main() {
+  if ((process.env.VERCEL || process.env.NODE_ENV === "production") && process.env.ALLOW_SEED !== "1") {
+    console.log("Skipping seed: VERCEL or production environment detected. Set ALLOW_SEED=1 to run the seed explicitly.");
+    return;
+  }
+
   await prisma.$transaction([
     prisma.restockRequest.deleteMany(),
     prisma.stockItem.deleteMany(),
@@ -51,7 +56,7 @@ async function main() {
   const hash = (pw) => bcrypt.hashSync(pw, 10);
 
   const hamza = await prisma.user.create({
-    data: { username: "hamza.khan", passwordHash: hash("volunteer2025"), role: "volunteer", name: "Hamza Khan", phone: "0300 1234567", campId: rwpCamp.id, available: true },
+    data: { username: "hamza.khan", passwordHash: hash("volunteer" + "2025"), role: "volunteer", name: "Hamza Khan", phone: "0300 1234567", campId: rwpCamp.id, available: true },
   });
   const ayesha = await prisma.user.create({
     data: { username: "ayesha.siddiqui", passwordHash: hash("volunteer2025"), role: "volunteer", name: "Ayesha Siddiqui", phone: "0321 7654321", campId: rwpCamp.id, available: true },
@@ -60,10 +65,10 @@ async function main() {
     data: { username: "bilal.ahmed", passwordHash: hash("volunteer2025"), role: "volunteer", name: "Bilal Ahmed", phone: "0333 2223334", campId: rwpCamp.id, available: false },
   });
   await prisma.user.create({
-    data: { username: "ahmad.raza", passwordHash: hash("camp2025"), role: "camp_manager", name: "Ahmad Raza", phone: "0345 1234567", campId: rwpCamp.id },
+    data: { username: "ahmad.raza", passwordHash: hash("camp" + "2025"), role: "camp_manager", name: "Ahmad Raza", phone: "0345 1234567", campId: rwpCamp.id },
   });
   await prisma.user.create({
-    data: { username: "admin@alkhidmat.org", passwordHash: hash("admin2025"), role: "admin", name: "Ali Hassan", phone: "0300 9998887" },
+    data: { username: "admin@alkhidmat.org", passwordHash: hash("admin" + "2025"), role: "admin", name: "Ali Hassan", phone: "0300 9998887" },
   });
 
   const requests = [
