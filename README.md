@@ -11,6 +11,54 @@ RippleNet is a hackathon prototype for coordinating flood-related assistance req
 
 ---
 
+## Architecture overview
+
+The diagram below shows how users interact with the RippleNet application, how requests flow through the server-side pipeline, and which external services provide supporting evidence.
+
+```mermaid
+flowchart TB
+  subgraph People["Human users"]
+    Citizen["Citizen / requester"]
+    Manager["Camp manager"]
+    Volunteer["Volunteer"]
+    Admin["Administrator"]
+  end
+
+  subgraph App["RippleNet Next.js application"]
+    UI["App Router pages and UI"]
+    API["Route handlers / server actions"]
+    Auth["Authentication and role checks"]
+    Queue["Request queue and detail"]
+    Pipeline["Live five-agent pipeline"]
+    Score["Deterministic triage heuristic"]
+    Cache["Persisted analysis cache"]
+  end
+
+  DB[("PostgreSQL / Neon<br/>Prisma ORM")]
+  Groq["Groq Chat Completions API"]
+  Weather["Open-Meteo API"]
+  Routing["OSRM public routing<br/>OpenStreetMap road data"]
+
+  Citizen --> UI
+  Manager --> UI
+  Volunteer --> UI
+  Admin --> UI
+  UI --> API
+  API --> Auth
+  API <--> DB
+  Manager --> Queue
+  Queue --> Score
+  Queue --> Weather
+  Queue --> Routing
+  Queue --> Pipeline
+  Pipeline --> Groq
+  Pipeline --> DB
+  Pipeline --> Cache
+  Cache --> DB
+```
+
+For the live agent-analysis sequence, component responsibilities, trust boundaries, and deployment details, see [the full architecture documentation](docs/architecture.md).
+
 ## The problem
 
 During a flood or other emergency, help requests can arrive faster than teams can manually triage them. When volunteers, transport, and supplies are limited, responders need more than an unqualified priority label: they need to see the available evidence, understand what is unknown, check stock, and retain control over dispatch.
