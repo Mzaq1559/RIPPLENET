@@ -8,7 +8,7 @@ RIPPLENET runs five independent Groq-powered analysis agents when a camp manager
 4. **Route information** — summarizes OSRM road-network distance and ETA. Road passability, closures, and vehicle suitability remain unverified unless a trusted source is added.
 5. **Resource transparency** — reports that a cost estimate is unavailable until a verified price catalog exists. Placeholder prices are not used.
 
-The five calls run concurrently. Each result includes its completion status, model identifier, a concise summary, and evidence derived from the supplied inputs. Failed agents are marked as failed; the system does not fabricate substitute results. The full result is cached on the request for ten minutes to avoid repeated provider calls on page refresh.
+The five calls run concurrently. Each result includes its completion status, model identifier, a concise summary, and evidence derived from the supplied inputs. Failed agents are marked as failed; the system does not fabricate substitute results. The full result is cached on the request and reused on page refresh. A camp manager can explicitly request a new analysis; volunteer task views only read the saved result and never trigger duplicate agent runs.
 
 ## Risk and execution boundaries
 
