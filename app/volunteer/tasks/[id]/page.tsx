@@ -174,7 +174,7 @@ export default async function TaskDetailPage(props: { params: Promise<{ id: stri
 
   const dueAt = new Date((request.assignedAt ?? request.createdAt).getTime() + 2 * 60 * 60 * 1000);
   const summary = [
-    { label: "Distance", value: distanceKm != null ? `${distanceKm} km` : "—" },
+    { label: route ? "Road distance" : "Approx. distance", value: distanceKm != null ? `${distanceKm} km` : "—" },
     { label: "ETA", value: etaMin != null ? `${etaMin} min` : "—" },
     { label: "Due Time", value: formatDayTime(dueAt) },
   ] as const;
@@ -348,7 +348,7 @@ export default async function TaskDetailPage(props: { params: Promise<{ id: stri
         <section className="mt-5 px-5">
           <SectionHeading title="Route" />
           <p className="mt-1 text-[11.5px] text-slate-500">
-            {route?.viaName ? `Via ${route.viaName}` : "Fastest road route"} · OpenStreetMap road-network estimate
+            {route?.viaName ? `Via ${route.viaName}` : route ? "OpenStreetMap road-network route" : "Road route unavailable"} · OSRM estimate
           </p>
           <div className="relative mt-3 h-[175px] overflow-hidden rounded-2xl border border-slate-100 shadow-sm">
             {camp ? (
