@@ -66,8 +66,8 @@ export default function CampsMapInner({ points }: { points: CampMapPoint[] }) {
           </Marker>
         ))}
         <FitCamps points={positions} />
+        <MapZoomControls />
       </MapContainer>
-      <MapZoomControls />
     </div>
   );
 }
