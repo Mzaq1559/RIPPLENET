@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import L from "leaflet";
 import { MapContainer, Marker, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { MapZoomControls } from "./map-zoom-controls";
 import "leaflet/dist/leaflet.css";
 
 export interface CampMapPoint {
@@ -41,17 +42,15 @@ function FitCamps({ points }: { points: [number, number][] }) {
 }
 
 export default function CampsMapInner({ points }: { points: CampMapPoint[] }) {
-  const [map, setMap] = useState<L.Map | null>(null);
   const positions = points.map((p) => [p.lat, p.lng] as [number, number]);
 
   return (
     <div className="relative h-full w-full">
       <MapContainer
-        ref={setMap}
         center={positions[0] ?? [30.3753, 69.3451]}
         zoom={5}
         zoomControl={false}
-        scrollWheelZoom={false}
+        scrollWheelZoom={true}
         attributionControl
         className="h-full w-full relative z-[1] isolate"
       >
@@ -68,24 +67,7 @@ export default function CampsMapInner({ points }: { points: CampMapPoint[] }) {
         ))}
         <FitCamps points={positions} />
       </MapContainer>
-      <div className="absolute bottom-3 right-3 z-[500] flex flex-col gap-1.5">
-        <button
-          type="button"
-          aria-label="Zoom in"
-          onClick={() => map?.zoomIn()}
-          className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-[16px] font-bold text-ink shadow-md transition active:scale-95"
-        >
-          +
-        </button>
-        <button
-          type="button"
-          aria-label="Zoom out"
-          onClick={() => map?.zoomOut()}
-          className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-[16px] font-bold text-ink shadow-md transition active:scale-95"
-        >
-          −
-        </button>
-      </div>
+      <MapZoomControls />
     </div>
   );
 }
