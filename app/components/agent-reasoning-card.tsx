@@ -60,7 +60,7 @@ export function AgentReasoningCard({
   const citizenName = pipeline.citizenName ?? "Citizen Caller";
   const district = pipeline.district ?? "Flood Zone";
   const needsStr = (pipeline.needs ?? ["Emergency relief"]).join(", ");
-  const rainVal = pipeline.floodRainfall ?? 85.4;
+  const rainVal = pipeline.floodRainfall ?? 0;
   const { floodAgent, healthAgent, logisticsAgent, routeAgent, resourceAgent } = pipeline;
   const routeSummary = routeAgent.verdict;
 
@@ -70,8 +70,8 @@ export function AgentReasoningCard({
       health: {
         type: "health",
         title: "Health Agent",
-        roleSubtitle: "Diarrheal Outbreaks, Pathogen Screening & Clinical Triage",
-        badgeLabel: `${healthAgent.outbreakRiskTier} Risk`,
+        roleSubtitle: "Reported Symptom Review & Clinician Referral (Demo)",
+        badgeLabel: `Clinician review`,
         icon: IconHealthAgent,
         themeColor: {
           bg: "bg-rose-50",
@@ -83,31 +83,31 @@ export function AgentReasoningCard({
         stages: {
           monitoring: {
             actionTitle: "Monitoring Clinical Signals",
-            description: `Screening reported symptoms (${needsStr}) from ${citizenName}. Checking district epidemiological pathogen clusters...`,
+            description: `Screening reported symptoms (${needsStr}) from ${citizenName}. No diagnosis or outbreak assessment is performed in this static preview.`,
             terminalLog: `[HEALTH-01] 📡 MONITORING: Ingested clinical distress signal. Symptoms: ${needsStr}. Patient location: ${district}.`,
           },
           thinking: {
             actionTitle: "Analyzing Outbreak Probability",
-            description: `Calculating cholera transmission reproduction rate (R₀). Analyzing dehydration risk level & screening vulnerable demographics (infants/elderly)...`,
-            terminalLog: `[HEALTH-02] 🧠 THINKING: Cross-referencing cholera vs. rotavirus symptoms. Outbreak Risk Tier computed as: ${healthAgent.outbreakRiskTier}.`,
+            description: `Reviewing only the reported needs; no disease probability is generated.`,
+            terminalLog: `[HEALTH-02] SAMPLE: No disease diagnosis or outbreak probability is generated.`,
           },
           working: {
             actionTitle: "Formulating Clinical Protocol",
-            description: `Formulating clinical emergency triage plan. Checking drug contraindications and prescribing electrolyte rehydration...`,
-            terminalLog: `[HEALTH-03] ⚙️ WORKING: Contraindication check complete. Prescribing oral rehydration solution (ORS) + Zinc therapy. Contact hygiene protocols mandated.`,
+            description: `Preparing a non-diagnostic summary for qualified medical review.`,
+            terminalLog: `[HEALTH-03] ⚙️ WORKING: Static sample only. Refer reported symptoms to a qualified clinician. No diagnosis or medication advice is generated.`,
           },
           decision_made: {
             actionTitle: "Clinical Verdict Issued",
             description: healthAgent.verdict,
-            terminalLog: `[HEALTH-04] ✅ DECISION: Primary diagnosis ${healthAgent.detectedOutcomes.map((d) => d.disease).join(", ") || "Waterborne distress"}. High-priority medical dispatch verified.`,
+            terminalLog: `[HEALTH-04] ✅ DECISION: Health signals summarized for clinician review. No diagnosis or dispatch is performed.`,
           },
         },
       },
       flood: {
         type: "flood",
         title: "Flood Agent",
-        roleSubtitle: "Satellite Precipitation, River Basins & Inundation Severity",
-        badgeLabel: `${floodAgent.severityScore.toFixed(1)}/10 Severity`,
+        roleSubtitle: "Static Sample Rainfall Indicator (Simulation)",
+        badgeLabel: `${floodAgent.severityScore.toFixed(1)}/10 Demo Indicator`,
         icon: IconFloodAgent,
         themeColor: {
           bg: "bg-sky-50",
@@ -118,24 +118,24 @@ export function AgentReasoningCard({
         },
         stages: {
           monitoring: {
-            actionTitle: "Monitoring Satellite & River Telemetry",
-            description: `Pulling GPM/IMERG satellite precipitation data (${rainVal}mm 7-day rainfall) & river gauge discharge telemetry for ${district}...`,
-            terminalLog: `[FLOOD-01] 📡 MONITORING: Satellite radar ping. 7-day cumulative rainfall in ${district}: ${rainVal}mm. Checking river catchment runoff.`,
+            actionTitle: "Reviewing Sample Rainfall Inputs",
+            description: `Showing static scenario rainfall (${rainVal}mm over 7 days) for ${district}; no live weather or river-gauge data is used.`,
+            terminalLog: `[FLOOD-01] 📡 MONITORING: Static scenario rainfall value: ${rainVal}mm over 7 days.`,
           },
           thinking: {
-            actionTitle: "Modeling Runoff & Inundation Depth",
-            description: `Computing runoff catchment models & surface water velocity. Assessing embankment breach vulnerability and water depth forecast...`,
-            terminalLog: `[FLOOD-02] 🧠 THINKING: Runoff coefficient evaluated. Rising water table detected. Inundation depth estimated at ${floodAgent.severityScore >= 7 ? ">2.5 feet" : "1.2 feet"}.`,
+            actionTitle: "Reviewing Evidence Limitations",
+            description: `No river gauge, flood map, soil, elevation, or inundation evidence is included in this preview.`,
+            terminalLog: `[FLOOD-02] 🧠 THINKING: No measured inundation depth or rising water level is available in this static scenario.`,
           },
           working: {
-            actionTitle: "Computing Severity Index",
-            description: `Calculating flood severity index (${floodAgent.severityScore}/10 - ${floodAgent.severityLevel}). Generating flood inundation zone hazard map...`,
-            terminalLog: `[FLOOD-03] ⚙️ WORKING: Flood severity score assigned: ${floodAgent.severityScore}/10 (${floodAgent.severityLevel}). Broadcasting water cut hazard boundaries.`,
+            actionTitle: "Showing Illustrative Indicator",
+            description: `Displaying a sample rainfall indicator (${floodAgent.severityScore}/10); this is not a flood prediction.`,
+            terminalLog: `[FLOOD-03] ⚙️ WORKING: Demo-only rainfall indicator; no hazard map or dispatch instruction is generated.`,
           },
           decision_made: {
-            actionTitle: "Flood Severity Verdict Issued",
+            actionTitle: "Scenario Rainfall Summary",
             description: floodAgent.verdict,
-            terminalLog: `[FLOOD-04] ✅ DECISION: Flood severity classified as ${floodAgent.severityLevel}. Safe elevation thresholds sent to Route and Logistics agents.`,
+            terminalLog: `[FLOOD-04] ✅ DECISION: No flood severity, safe elevation, or route safety conclusion is available from this sample data.`,
           },
         },
       },
@@ -178,7 +178,7 @@ export function AgentReasoningCard({
       route: {
         type: "route",
         title: "Route Agent",
-        roleSubtitle: "OSRM Route Data & Unverified Road Passability",
+        roleSubtitle: "Static Route Example (Not Live OSRM)",
         badgeLabel: routeAgent.routeFound
           ? routeAgent.durationMin !== null ? `${routeAgent.durationMin} Min ETA` : `${routeAgent.distanceKm} km`
           : "Route data unavailable",
@@ -203,8 +203,8 @@ export function AgentReasoningCard({
           },
           working: {
             actionTitle: "Vehicle Recommendation",
-            description: `Recommended vehicle: ${routeAgent.recommendedVehicle}.`,
-            terminalLog: `[ROUTE-03] ⚙️ WORKING: Recommended vehicle: ${routeAgent.recommendedVehicle}.`,
+            description: `Vehicle suitability: ${routeAgent.recommendedVehicle}.`,
+            terminalLog: `[ROUTE-03] ⚙️ WORKING: Vehicle suitability: ${routeAgent.recommendedVehicle}.`,
           },
           decision_made: {
             actionTitle: "Route Data Summary",
@@ -228,13 +228,13 @@ export function AgentReasoningCard({
         },
         stages: {
           monitoring: {
-            actionTitle: "Reviewing Placeholder Unit Prices",
+            actionTitle: "Checking Verified Price Data",
             description: resourceAgent.economicVerdict,
             terminalLog: `[RESOURCE-01] 📡 MONITORING: ${resourceAgent.economicVerdict}`,
           },
           thinking: {
             actionTitle: "Calculating Per-Person Estimate",
-            description: "The current estimate uses placeholder unit prices; no budget audit is included.",
+            description: "No verified price catalog is configured; no cost estimate is shown.",
             terminalLog: "[RESOURCE-02] 🧠 THINKING: This output is a cost estimate, not a budget audit.",
           },
           working: {
@@ -354,14 +354,14 @@ export function AgentReasoningCard({
           </span>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-display text-[15px] font-bold text-ink">5 AI Agents Decision Engine</h3>
+              <h3 className="font-display text-[15px] font-bold text-ink">Static Agent Preview</h3>
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-extrabold text-emerald-700 ring-1 ring-emerald-500/20">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Active Synergy
+                Simulation Only
               </span>
             </div>
             <p className="text-[11px] font-medium text-slate-500">
-              Select an agent below to inspect its unique live reasoning
+              Illustrative sample outputs only — no live model calls are made here
             </p>
           </div>
         </div>
@@ -373,7 +373,7 @@ export function AgentReasoningCard({
           className="inline-flex h-8 items-center gap-1.5 rounded-full bg-channel px-3 text-[11px] font-bold text-white shadow-sm shadow-channel/30 transition hover:bg-channel/90 active:scale-95 disabled:opacity-50"
         >
           <IconRefresh className={`h-3.5 w-3.5 ${runningAgent === "all" ? "animate-spin" : ""}`} />
-          {runningAgent === "all" ? "Simulating All..." : "Re-Run All AI"}
+          {runningAgent === "all" ? "Replaying..." : "Replay Preview"}
         </button>
       </div>
 
@@ -410,7 +410,7 @@ export function AgentReasoningCard({
         })}
       </div>
 
-      {/* Dynamic Role-Specific Terminal & Live State Machine */}
+      {/* Dynamic Role-Specific Terminal & Sample State Sequence */}
       <div className="mt-3.5 rounded-2xl border border-slate-200 bg-slate-900 p-4 text-white shadow-inner">
         {/* Terminal Header */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
@@ -427,7 +427,7 @@ export function AgentReasoningCard({
             className="flex items-center gap-1 rounded-full bg-slate-800 px-2.5 py-0.5 font-mono text-[9.5px] font-bold text-cyan-300 hover:bg-slate-700 disabled:opacity-40"
           >
             <IconPlayFilled className="h-2.5 w-2.5" />
-            Run {currentDef.title}
+            Simulate {currentDef.title}
           </button>
         </div>
 
@@ -461,7 +461,7 @@ export function AgentReasoningCard({
           })}
         </div>
 
-        {/* Live Terminal Monologue for Selected Agent */}
+        {/* Illustrative Sample Output */}
         <div className="mt-3 rounded-xl bg-slate-950/90 p-3 font-mono text-[11px] leading-relaxed space-y-1.5">
           <p className="text-cyan-300 font-bold">
             ▶ [{currentPhase.toUpperCase()}]: {currentStageInfo.actionTitle}
@@ -509,7 +509,7 @@ export function AgentReasoningCard({
         {/* Agent Specific Evidence & Thoughts Drawer */}
         <div className="mt-3.5 space-y-2 border-t border-slate-100 pt-3">
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            {currentDef.title} Step-by-Step Evidence:
+            {currentDef.title} Illustrative Scenario Details:
           </p>
 
           {activeTab === "health" && (

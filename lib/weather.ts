@@ -4,79 +4,107 @@ const OM_BASE = "https://api.open-meteo.com/v1/forecast";
 
 interface OmApiResponse {
   current?: {
-    time: string;
+    time?: string;
     precipitation?: number | null;
     rain?: number | null;
     showers?: number | null;
     temperature_2m?: number | null;
   };
   daily?: {
-    time: string[];
+    time?: string[];
     precipitation_sum?: (number | null)[];
     rain_sum?: (number | null)[];
   };
 }
 
 async function fetchOmData(point: LatLng): Promise<OmApiResponse | null> {
-  const url = `${OM_BASE}?latitude=${point.lat.toFixed(4)}&longitude=${point.lng.toFixed(4)}&current=precipitation,rain,showers,temperature_2m&daily=precipitation_sum,rain_sum&past_days=7&forecast_days=4&timezone=auto`;
+  const url = new URL(OM_BASE);
+  url.searchParams.set("latitude", point.lat.toFixed(4));
+  url.searchParams.set("longitude", point.lng.toFixed(4));
+  url.searchParams.set("current", "precipitation,rain,showers,temperature_2m");
+  url.searchParams.set("daily", "precipitation_sum,rain_sum");
+  url.searchParams.set("past_days", "7");
+  url.searchParams.set("forecast_days", "4");
+  url.searchParams.set("timezone", "auto");
+
   try {
-    const res = await fetch(url, { next: { revalidate: 300 } });
-    if (!res.ok) return null;
-    const data: OmApiResponse = await res.json();
-    return data;
+    const response = await fetch(url, {
+      next: { revalidate: 300 },
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as OmApiResponse;
   } catch {
     return null;
   }
 }
 
+function unavailableRainfall(): RainfallFigures {
+  return {
+    last24hMm: null,
+    last7dMm: null,
+    next24hMm: null,
+    next72hMm: null,
+    currentPrecipitationMm: null,
+    tempC: null,
+    source: "Open-Meteo unavailable",
+    available: false,
+  };
+}
+
 function parseOmResponse(data: OmApiResponse | null): RainfallFigures {
-  if (!data || !data.daily) {
-    // Standard high-risk monsoonal baseline if offline
-    return {
-      last24hMm: 24.5,
-      last7dMm: 78.2,
-      next24hMm: 18.0,
-      next72hMm: 45.5,
-      currentMmH: 2.1,
-      tempC: 29.5,
-      source: "Open-Meteo AI Hydrological Model (Baseline)",
-    };
-  }
+  const daily = data?.daily;
+  const values = daily?.precipitation_sum ?? daily?.rain_sum;
+  if (!values || values.length < 8) return unavailableRainfall();
 
-  const p = data.daily.precipitation_sum ?? data.daily.rain_sum ?? [];
-  const num = (i: number) => (typeof p[i] === "number" ? (p[i] as number) : 0);
+  const at = (index: number): number | null => {
+    const value = values[index];
+    return typeof value === "number" && Number.isFinite(value) ? value : null;
+  };
+  const sum = (indices: number[]): number | null => {
+    const selected = indices.map(at);
+    if (selected.every((value) => value === null)) return null;
+    return selected.reduce<number>((total, value) => total + (value ?? 0), 0);
+  };
+  const rounded = (value: number | null) =>
+    value === null ? null : Math.round(value * 10) / 10;
 
-  // Past 7 days (indices 0 to 6)
-  const past7 = [0, 1, 2, 3, 4, 5, 6].reduce((s, i) => s + num(i), 0);
-  // Last 24 hours (index 6, yesterday / latest full day)
-  const last24 = num(6);
-  // Next 24h & Next 72h
-  const next24 = num(8);
-  const next72 = [8, 9, 10].reduce((s, i) => s + num(i), 0);
-
-  const currentPrecip = data.current?.precipitation ?? data.current?.rain ?? 0;
-  const currentTemp = data.current?.temperature_2m ?? 28;
+  const last24hMm = rounded(at(6));
+  const last7dMm = rounded(sum([0, 1, 2, 3, 4, 5, 6]));
+  const next24hMm = rounded(at(8));
+  const next72hMm = rounded(sum([8, 9, 10]));
+  const currentPrecipitation = data?.current?.precipitation ?? data?.current?.rain ?? null;
+  const temp = data?.current?.temperature_2m ?? null;
+  const currentPrecipitationMm =
+    typeof currentPrecipitation === "number" ? rounded(currentPrecipitation) : null;
+  const tempC = typeof temp === "number" ? rounded(temp) : null;
+  const available = [
+    last24hMm,
+    last7dMm,
+    next24hMm,
+    next72hMm,
+    currentPrecipitationMm,
+  ].some((value) => value !== null);
 
   return {
-    last24hMm: Math.round(last24 * 10) / 10,
-    last7dMm: Math.round(past7 * 10) / 10,
-    next24hMm: Math.round(next24 * 10) / 10,
-    next72hMm: Math.round(next72 * 10) / 10,
-    currentMmH: Math.round(currentPrecip * 10) / 10,
-    tempC: Math.round(currentTemp * 10) / 10,
-    source: "Open-Meteo High-Resolution Real-Time Radar & Satellite API",
+    last24hMm,
+    last7dMm,
+    next24hMm,
+    next72hMm,
+    currentPrecipitationMm,
+    tempC,
+    source: "Open-Meteo Forecast API",
+    available,
   };
 }
 
 export async function fetchRainfall(point: LatLng): Promise<RainfallFigures> {
-  const data = await fetchOmData(point);
-  return parseOmResponse(data);
+  return parseOmResponse(await fetchOmData(point));
 }
 
 export async function fetchRainfallBatch(
-  points: LatLng[]
+  points: LatLng[],
 ): Promise<RainfallFigures[]> {
   if (points.length === 0) return [];
-  const results = await Promise.all(points.map((p) => fetchRainfall(p)));
-  return results;
+  return Promise.all(points.map(fetchRainfall));
 }

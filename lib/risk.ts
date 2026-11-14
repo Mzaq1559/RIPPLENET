@@ -41,10 +41,7 @@ export function assessRisk(request: {
   return { score: rounded, level: "Low", levelColor: "text-emerald-500", badge: "bg-emerald-500", stroke: "#10b981", track: "#d1fae5" };
 }
 
-export function priorityPercentile(score: number): string {
-  if (score >= 9) return "top 1%";
-  if (score >= 8) return "top 5%";
-  if (score >= 6.5) return "top 10%";
-  if (score >= 5) return "top 25%";
-  return "top 50%";
+export function priorityPercentile(_score: number): string {
+  // No historical population dataset exists to support a statistical percentile.
+  return "Not statistically calibrated";
 }

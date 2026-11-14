@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { DemoClient } from "./demo-client";
 
 export const metadata: Metadata = {
-  title: "Interactive Live Demo — RippleNet AI",
-  description: "Test the 5 AI Agents decision intelligence pipeline live on flood relief scenarios.",
+  title: "Scenario Simulation — RippleNet",
+  description: "Explore illustrative flood-relief workflows using static sample scenarios. This page does not run live AI inference.",
 };
 
 export default function DemoPage() {

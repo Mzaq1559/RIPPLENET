@@ -25,14 +25,12 @@ import {
 } from "../../components/icons";
 import { prisma } from "../../../lib/db";
 import { getSession } from "../../../lib/session";
-import { assessRisk, priorityPercentile } from "../../../lib/risk";
+import { assessRisk } from "../../../lib/risk";
 import { fetchRoute } from "../../../lib/osrm";
-import { haversineKm } from "../../../lib/geo";
-import { mergeCamps, getMockRequestsForCamp, type CampRecord } from "../../../lib/camps";
-import { AgentReasoningCard } from "../../components/agent-reasoning-card";
-import { runMultiAgentPipeline, type StockSnapshotItem } from "../../../lib/agents";
+import { LiveAgentAnalysisCard } from "../../components/live-agent-analysis-card";
+import { runLiveMultiAgentPipeline, type LiveMultiAgentPipelineResult, type StockSnapshotItem } from "../../../lib/agents/live";
 import { fetchRainfall } from "../../../lib/weather";
-import { displayPriority, formatFullDate, parseNeeds, suggestParcel } from "../../../lib/needs";
+import { displayPriority, formatFullDate, parseNeeds } from "../../../lib/needs";
 
 export const dynamic = "force-dynamic";
 
@@ -111,14 +109,22 @@ function RiskGauge({
   );
 }
 
-export default async function RequestDetailsPage(props: { params: Promise<{ id: string }> }) {
+export default async function RequestDetailsPage(props: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const session = await getSession();
   if (!session || session.role !== "camp_manager") redirect("/login");
 
   const { id } = await props.params;
+  const searchParams = props.searchParams ? await props.searchParams : {};
+  const rawRefreshAnalysis = searchParams.refreshAnalysis;
+  const forceAnalysisRefresh = Array.isArray(rawRefreshAnalysis)
+    ? rawRefreshAnalysis[0] === "1"
+    : rawRefreshAnalysis === "1";
   const numeric = Number(id);
   const decodedId = decodeURIComponent(id).trim();
-  let request: any = await prisma.request.findFirst({
+  const request = await prisma.request.findFirst({
     where: {
       OR: [
         ...(Number.isFinite(numeric) && /^\d+$/.test(decodedId) ? [{ id: numeric }] : []),
@@ -130,52 +136,7 @@ export default async function RequestDetailsPage(props: { params: Promise<{ id: 
     include: { camp: true, volunteer: true },
   });
 
-  if (!request) {
-    const allCamps: CampRecord[] = mergeCamps();
-    for (const c of allCamps) {
-      const mocks = getMockRequestsForCamp(c);
-      const found = mocks.find(
-        (m: any) =>
-          m.code.toUpperCase() === decodedId.toUpperCase() ||
-          String(m.id) === decodedId ||
-          m.code === decodedId
-      );
-      if (found) {
-        request = {
-          ...found,
-          camp: c,
-          volunteer: null,
-          resolution: null,
-        };
-        break;
-      }
-    }
-  }
-
-  if (!request) {
-    const allCamps: CampRecord[] = mergeCamps();
-    const fallbackCamp = allCamps.find((c: CampRecord) => c.id === session.campId) || allCamps[0];
-    request = {
-      id: numeric || 9999,
-      code: decodedId.toUpperCase(),
-      citizenName: "Citizen Request",
-      phone: "0300 1234567",
-      type: "medical",
-      priority: "high",
-      needs: JSON.stringify(["Emergency Relief", "Clean Water", "First Aid Kit"]),
-      district: fallbackCamp.district,
-      lat: fallbackCamp.lat + 0.01,
-      lng: fallbackCamp.lng + 0.01,
-      location: `${fallbackCamp.district} Relief Sector`,
-      peopleCount: 4,
-      status: "pending",
-      createdAt: new Date(),
-      campId: fallbackCamp.id,
-      camp: fallbackCamp,
-      volunteer: null,
-      resolution: null,
-    };
-  }
+  if (!request) notFound();
 
   const camp = request.camp;
   const needs = parseNeeds(request.needs);
@@ -185,19 +146,13 @@ export default async function RequestDetailsPage(props: { params: Promise<{ id: 
     peopleCount: request.peopleCount,
     needs,
   });
-  const parcel = suggestParcel(needs, request.type);
   const pill = statusPills[request.status] ?? statusPills.pending;
 
   const [route, liveRainfall] = await Promise.all([
     camp ? fetchRoute({ lat: camp.lat, lng: camp.lng }, { lat: request.lat, lng: request.lng }) : null,
     fetchRainfall({ lat: request.lat, lng: request.lng }),
   ]);
-  const distanceKm =
-    route?.distanceKm ??
-    (camp
-      ? Math.round(haversineKm({ lat: camp.lat, lng: camp.lng }, { lat: request.lat, lng: request.lng }) * 10) / 10
-      : null);
-  const etaMin = route?.durationMin ?? null;
+
 
   const volunteers = await prisma.user.findMany({
     where: { role: "volunteer", campId: session.campId },
@@ -240,20 +195,18 @@ export default async function RequestDetailsPage(props: { params: Promise<{ id: 
   }));
 
   const priorityLabel = displayPriority(request.priority);
-  const percentile = priorityPercentile(risk.score);
   const priorityAction =
     risk.score >= 8
-      ? "immediate dispatch required"
+      ? "recommend immediate human review"
       : risk.score >= 6
-        ? "prioritize over routine requests"
+        ? "review before routine requests"
         : risk.score >= 4
-          ? "schedule within the day"
-          : "standard queue handling";
+          ? "consider scheduling within the day"
+          : "standard queue review";
 
   const vulnerableNeeds = needs.filter((n) =>
     /child|baby|infant|under 5|elderly|pregnan|mother|newborn|disabled/i.test(n)
   );
-  const outbreakSignal = /diarrhea|cholera|water|fever|dehydra|hygien|sanitat/i.test(needs.join(" "));
 
   let resolution: { items?: string[]; peopleHelped?: number; notes?: string } | null = null;
   if (request.resolution) {
@@ -282,27 +235,59 @@ export default async function RequestDetailsPage(props: { params: Promise<{ id: 
     }
   }
 
-  const pipeline = runMultiAgentPipeline({
-    requestId: request.code,
-    citizenName: request.citizenName,
-    needs,
-    priority: request.priority,
-    type: request.type,
-    peopleCount: request.peopleCount,
-    district: request.district,
-    lat: request.lat,
-    lng: request.lng,
-    campName: camp?.name ?? "Alkhidmat Camp",
-    volunteerName: request.volunteer?.name,
-    routeDistanceKm: route?.distanceKm ?? null,
-    routeDurationMin: etaMin,
-    routeVia: route?.viaName,
-    rainfall24h: liveRainfall.last24hMm,
-    rainfall7d: liveRainfall.last7dMm,
-    currentRainfallRate: liveRainfall.currentMmH,
-    weatherSource: liveRainfall.source,
-    stock,
-  });
+  // Reuse the persisted analysis until a camp manager explicitly requests a refresh.
+  const analysisIsFresh =
+    !forceAnalysisRefresh && request.agentAnalysisAt instanceof Date;
+  let pipeline: LiveMultiAgentPipelineResult | null = null;
+
+  if (analysisIsFresh && typeof request.agentAnalysis === "string") {
+    try {
+      pipeline = JSON.parse(request.agentAnalysis) as LiveMultiAgentPipelineResult;
+    } catch {
+      pipeline = null;
+    }
+  }
+
+  if (!pipeline) {
+    pipeline = await runLiveMultiAgentPipeline({
+      requestId: request.code,
+      needs,
+      priority: request.priority,
+      type: request.type,
+      peopleCount: request.peopleCount,
+      district: request.district,
+      weather: liveRainfall,
+      route,
+      stock,
+    });
+
+    const anyAgentCompleted = [
+      pipeline.floodAgent,
+      pipeline.healthAgent,
+      pipeline.logisticsAgent,
+      pipeline.routeAgent,
+      pipeline.resourceAgent,
+    ].some((agent) => agent.status === "completed");
+
+    if (anyAgentCompleted) {
+      try {
+        await prisma.request.update({
+          where: { id: request.id },
+          data: {
+            agentAnalysis: JSON.stringify(pipeline),
+            agentAnalysisAt: new Date(),
+          },
+        });
+      } catch (error) {
+        console.warn("Could not cache request agent analysis:", error);
+      }
+    }
+  }
+
+  const parcel = pipeline.logisticsAgent.output?.items.map((item) => ({
+    name: item.name,
+    qty: `${item.quantity} ${item.unit}`,
+  })) ?? [];
 
   return (
     <AuthGuard role="camp_manager" loginHref="/login">
@@ -392,22 +377,20 @@ export default async function RequestDetailsPage(props: { params: Promise<{ id: 
 
             <div className="mt-4 border-t border-slate-100 pt-3.5">
               <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                Outbreak Risk (Village)
+                AI Health Triage
               </p>
-              <p className={`mt-1 font-display text-[14px] font-bold ${outbreakSignal ? "text-rose-600" : "text-emerald-600"}`}>
-                {outbreakSignal ? "Primary" : "Monitored"}
+              <p className="mt-1 font-display text-[14px] font-bold text-ink">
+                {pipeline.healthAgent.output?.urgency ?? "Unavailable"}
               </p>
               <p className="mt-0.5 text-[11.5px] font-medium text-slate-500">
-                {outbreakSignal
-                  ? "High risk of outbreak"
-                  : "No outbreak signals in reported needs"}
+                Advisory signal only. A qualified clinician must review health decisions.
               </p>
             </div>
           </div>
         </section>
 
         <section className="mt-5 px-5">
-          <AgentReasoningCard pipeline={pipeline} />
+          <LiveAgentAnalysisCard pipeline={pipeline} />
         </section>
 
         <section className="mt-6 px-5">
@@ -415,7 +398,7 @@ export default async function RequestDetailsPage(props: { params: Promise<{ id: 
             Deployment Manifest
           </h2>
           <p className="mt-1 text-[11.5px] text-slate-500">
-            5-Agent autonomous decision intelligence behind this response.
+            Five advisory agents summarize available evidence; all dispatch decisions remain human-controlled.
           </p>
           <div className="mt-3.5 flex flex-col gap-2.5">
             <div className="rounded-2xl border border-rose-100 bg-rose-50 p-3.5">
@@ -442,9 +425,8 @@ export default async function RequestDetailsPage(props: { params: Promise<{ id: 
                 2. Priority &amp; Health Triage Effect
               </p>
               <p className="mt-1.5 text-[12px] leading-[1.55] text-slate-600">
-                Risk score <span className="font-semibold text-ink">{risk.score.toFixed(1)}</span> places this request in the{" "}
-                <span className="font-semibold text-ink">{percentile}</span> — {priorityAction}. Health Agent flagged{" "}
-                <span className="font-semibold text-ink">{pipeline.healthAgent.outbreakRiskTier} Outbreak Risk</span>.
+                Risk score <span className="font-semibold text-ink">{risk.score.toFixed(1)}</span> is a rule-based triage heuristic — {priorityAction}. Health Agent triage:{" "}
+                <span className="font-semibold text-ink">{pipeline.healthAgent.output?.urgency ?? "unavailable"}</span>.
               </p>
             </div>
 
@@ -455,14 +437,12 @@ export default async function RequestDetailsPage(props: { params: Promise<{ id: 
               <div className="mt-1.5 space-y-1 text-[12px] leading-[1.55] text-slate-600">
                 <p className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" />
-                  {pipeline.routeAgent.routeFound
-                    ? `OSRM route: ${pipeline.routeAgent.distanceKm} km${pipeline.routeAgent.viaRoadName ? ` via ${pipeline.routeAgent.viaRoadName}` : ""}`
+                  {route
+                    ? `OSRM route: ${route.distanceKm} km${route.viaName ? ` via ${route.viaName}` : ""}`
                     : "Route data unavailable"}
                 </p>
                 <p className="pt-0.5 font-bold text-sky-700">
-                  {pipeline.routeAgent.durationMin != null
-                    ? `ETA: ${pipeline.routeAgent.durationMin} min · Mode: ${pipeline.routeAgent.recommendedVehicle}`
-                    : `Recommended mode: ${pipeline.routeAgent.recommendedVehicle}`}
+                  {route ? `OSRM estimated duration: ${route.durationMin} min` : "No route estimate available"}
                 </p>
                 <p className="text-[11px] text-slate-500">Road passability is not verified.</p>
               </div>
@@ -495,7 +475,7 @@ export default async function RequestDetailsPage(props: { params: Promise<{ id: 
                 5. Resource Agent Cost Estimate
               </p>
               <p className="mt-1.5 text-[12px] leading-[1.55] text-slate-600">
-                {pipeline.resourceAgent.economicVerdict}
+                {pipeline.resourceAgent.summary}
               </p>
             </div>
           </div>
@@ -503,7 +483,7 @@ export default async function RequestDetailsPage(props: { params: Promise<{ id: 
 
         <section className="mt-6 px-5">
           <h2 className="font-display text-[19px] font-bold tracking-tight text-ink">
-            Recommended Parcel
+            AI-Suggested Parcel
           </h2>
           <div className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1">
             {parcel.map((item) => (

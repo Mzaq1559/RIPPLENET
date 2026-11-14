@@ -34,9 +34,8 @@ import { prisma } from "../../../../lib/db";
 import { getSession } from "../../../../lib/session";
 import { haversineKm } from "../../../../lib/geo";
 import { fetchRoute } from "../../../../lib/osrm";
-import { mergeCamps, getMockRequestsForCamp, type CampRecord } from "../../../../lib/camps";
-import { runMultiAgentPipeline } from "../../../../lib/agents";
-import { parseNeeds, displayPriority, formatDayTime, suggestParcel } from "../../../../lib/needs";
+import { parseNeeds, displayPriority, formatDayTime } from "../../../../lib/needs";
+import type { LiveMultiAgentPipelineResult } from "../../../../lib/agents/live";
 import { StartTripButton } from "./start-trip-button";
 
 export const metadata: Metadata = {
@@ -102,6 +101,35 @@ function SectionHeading({ title }: { title: string }) {
   return <h2 className="font-display text-[19px] font-bold tracking-tight text-ink">{title}</h2>;
 }
 
+function parseCachedPipeline(serialized: string | null): LiveMultiAgentPipelineResult | null {
+  if (!serialized) return null;
+  try {
+    const parsed: unknown = JSON.parse(serialized);
+    if (!parsed || typeof parsed !== "object") return null;
+    const value = parsed as Record<string, unknown>;
+    const isExecution = (candidate: unknown): boolean => {
+      if (!candidate || typeof candidate !== "object") return false;
+      const execution = candidate as Record<string, unknown>;
+      return (
+        (execution.status === "completed" || execution.status === "failed") &&
+        typeof execution.summary === "string"
+      );
+    };
+    return (
+      typeof value.requestId === "string" &&
+      isExecution(value.floodAgent) &&
+      isExecution(value.healthAgent) &&
+      isExecution(value.logisticsAgent) &&
+      isExecution(value.routeAgent) &&
+      isExecution(value.resourceAgent)
+    )
+      ? (parsed as LiveMultiAgentPipelineResult)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export const dynamic = "force-dynamic";
 
 export default async function TaskDetailPage(props: { params: Promise<{ id: string }> }) {
@@ -111,8 +139,9 @@ export default async function TaskDetailPage(props: { params: Promise<{ id: stri
 
   const numeric = Number(id);
   const decodedId = decodeURIComponent(id).trim();
-  let request: any = await prisma.request.findFirst({
+  const request = await prisma.request.findFirst({
     where: {
+      volunteerId: session.id,
       OR: [
         ...(Number.isFinite(numeric) && /^\d+$/.test(decodedId) ? [{ id: numeric }] : []),
         { code: decodedId },
@@ -123,54 +152,7 @@ export default async function TaskDetailPage(props: { params: Promise<{ id: stri
     include: { camp: true },
   });
 
-  if (!request) {
-    const allCamps: CampRecord[] = mergeCamps();
-    for (const c of allCamps) {
-      const mocks = getMockRequestsForCamp(c);
-      const found = mocks.find(
-        (m: any) =>
-          m.code.toUpperCase() === decodedId.toUpperCase() ||
-          String(m.id) === decodedId ||
-          m.code === decodedId
-      );
-      if (found) {
-        request = {
-          ...found,
-          camp: c,
-        };
-        break;
-      }
-    }
-  }
-
-  if (!request) {
-    const allCamps: CampRecord[] = mergeCamps();
-    const fallbackCamp = allCamps[0];
-    request = {
-      id: numeric || 9999,
-      code: decodedId.toUpperCase(),
-      citizenName: "Citizen Request",
-      phone: "0300 1234567",
-      type: "medical",
-      priority: "high",
-      needs: JSON.stringify(["Emergency Relief", "Clean Water", "First Aid Kit"]),
-      district: fallbackCamp.district,
-      lat: fallbackCamp.lat + 0.01,
-      lng: fallbackCamp.lng + 0.01,
-      location: `${fallbackCamp.district} Relief Zone`,
-      peopleCount: 4,
-      status: "resolved",
-      createdAt: new Date(Date.now() - 3600000 * 2),
-      resolvedAt: new Date(),
-      campId: fallbackCamp.id,
-      camp: fallbackCamp,
-      resolution: JSON.stringify({
-        items: ["Clean Water Rations", "First Aid Kit"],
-        peopleHelped: 4,
-        notes: "Delivered emergency supplies to family successfully.",
-      }),
-    };
-  }
+  if (!request) notFound();
 
   let resolutionData: { items?: string[]; peopleHelped?: number; notes?: string } = {};
   if (request.resolution) {
@@ -183,7 +165,8 @@ export default async function TaskDetailPage(props: { params: Promise<{ id: stri
 
   const camp = request.camp;
   const needs = parseNeeds(request.needs);
-  const parcel = suggestParcel(needs, request.type);
+  const pipeline = parseCachedPipeline(request.agentAnalysis);
+  const suggestedItems = pipeline?.logisticsAgent.output?.items ?? [];
 
   const route = camp ? await fetchRoute({ lat: camp.lat, lng: camp.lng }, { lat: request.lat, lng: request.lng }) : null;
   const distanceKm = route?.distanceKm ?? (camp ? Math.round(haversineKm({ lat: camp.lat, lng: camp.lng }, { lat: request.lat, lng: request.lng }) * 10) / 10 : null);
@@ -191,7 +174,7 @@ export default async function TaskDetailPage(props: { params: Promise<{ id: stri
 
   const dueAt = new Date((request.assignedAt ?? request.createdAt).getTime() + 2 * 60 * 60 * 1000);
   const summary = [
-    { label: "Distance", value: distanceKm != null ? `${distanceKm} km` : "—" },
+    { label: route ? "Road distance" : "Approx. distance", value: distanceKm != null ? `${distanceKm} km` : "—" },
     { label: "ETA", value: etaMin != null ? `${etaMin} min` : "—" },
     { label: "Due Time", value: formatDayTime(dueAt) },
   ] as const;
@@ -199,20 +182,7 @@ export default async function TaskDetailPage(props: { params: Promise<{ id: stri
   const priority = displayPriority(request.priority);
   const badge = priorityBadges[priority];
 
-  const pipeline = runMultiAgentPipeline({
-    requestId: request.code,
-    citizenName: request.citizenName,
-    needs,
-    priority: request.priority,
-    type: request.type,
-    peopleCount: request.peopleCount,
-    district: request.district,
-    campName: camp?.name ?? "Alkhidmat Relief Camp",
-    volunteerName: session.name,
-    routeDistanceKm: distanceKm,
-    routeDurationMin: etaMin,
-    routeVia: route?.viaName,
-  });
+
 
   return (
     <AuthGuard role="volunteer" loginHref="/volunteer/login">
@@ -255,24 +225,27 @@ export default async function TaskDetailPage(props: { params: Promise<{ id: stri
           </div>
         </section>
 
-        {/* AI Agent Field Briefing */}
         <section className="mt-4 px-5">
           <div className="rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 to-indigo-50/50 p-3.5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 font-display text-[12px] font-bold text-ink">
-                🤖 AI Field Briefing (Route &amp; Health Agents)
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-display text-[12px] font-bold text-ink">
+                AI Advisory Briefing
               </span>
-              <span className="rounded-full bg-channel px-2 py-0.5 text-[9px] font-bold text-white">
-                {pipeline.routeAgent.recommendedVehicle}
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-600">
+                {pipeline ? "Cached analysis" : "Not available"}
               </span>
             </div>
-            <div className="mt-2 space-y-1 text-[11.5px] text-slate-600">
+            <div className="mt-2 space-y-2 text-[11.5px] text-slate-600">
               <p>
-                <span className="font-semibold text-ink">🗺️ Route Advice:</span> {pipeline.routeAgent.verdict}
+                <span className="font-semibold text-ink">Route information:</span>{" "}
+                {pipeline?.routeAgent.summary ?? "No saved route analysis is available for this request."}
               </p>
               <p>
-                <span className="font-semibold text-ink">🦠 Pathogen Caution:</span> {pipeline.healthAgent.verdict}{" "}
-                {pipeline.healthAgent.contraindications.length > 0 && `(${pipeline.healthAgent.contraindications[0]})`}
+                <span className="font-semibold text-ink">Health triage:</span>{" "}
+                {pipeline?.healthAgent.summary ?? "No saved health triage is available for this request."}
+              </p>
+              <p className="border-t border-sky-100 pt-2 text-[10.5px] text-slate-500">
+                Advisory only. Road passability is unverified. A qualified clinician must review health decisions.
               </p>
             </div>
           </div>
@@ -330,32 +303,52 @@ export default async function TaskDetailPage(props: { params: Promise<{ id: stri
         </section>
 
         <section className="mt-5 px-5">
-          <SectionHeading title="Parcel to Deliver" />
+          <SectionHeading title="AI Suggested Items" />
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+            Suggestions are advisory only. Check physical stock and confirm the allocation before dispatch; no stock is reserved by this analysis.
+          </p>
           <div className="mt-3 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-            {parcel.map(({ name, qty }, i) => {
-              const Icon = parcelIcons[name] ?? IconPackageLight;
-              return (
-                <div
-                  key={name}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 ${i > 0 ? "border-t border-slate-100" : ""}`}
-                >
-                  <Icon className="h-9 w-9 shrink-0" />
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">
-                    {name}
-                  </span>
-                  <span className="shrink-0 text-[11.5px] font-bold tabular-nums text-slate-500">
-                    {qty}
-                  </span>
-                </div>
-              );
-            })}
+            {suggestedItems.length > 0 ? (
+              suggestedItems.map((item, i) => {
+                const Icon = parcelIcons[item.name] ?? IconPackageLight;
+                const stockLabel =
+                  item.stockStatus === "in_stock"
+                    ? "Matching stock record"
+                    : item.stockStatus === "short"
+                      ? `Recorded stock short: ${item.available ?? 0} ${item.unit}`
+                      : item.stockStatus === "unit_mismatch"
+                        ? "Stock unit mismatch"
+                        : item.stockStatus === "not_tracked"
+                          ? "Not tracked in camp stock"
+                          : "Stock not checked";
+                return (
+                  <div
+                    key={`${item.name}-${i}`}
+                    className={`flex items-center gap-3 px-3.5 py-2.5 ${i > 0 ? "border-t border-slate-100" : ""}`}
+                  >
+                    <Icon className="h-9 w-9 shrink-0" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] font-semibold text-ink">{item.name}</span>
+                      <span className="mt-0.5 block text-[10px] text-slate-500">{stockLabel}</span>
+                    </span>
+                    <span className="shrink-0 text-[11.5px] font-bold tabular-nums text-slate-500">
+                      {item.quantity} {item.unit}
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="p-4 text-[11.5px] leading-relaxed text-slate-500">
+                No saved AI item suggestions are available. Ask the camp manager to run the analysis, then verify stock manually.
+              </p>
+            )}
           </div>
         </section>
 
         <section className="mt-5 px-5">
           <SectionHeading title="Route" />
           <p className="mt-1 text-[11.5px] text-slate-500">
-            {route?.viaName ? `Via ${route.viaName}` : "Fastest road route"} · Live OSRM road data
+            {route?.viaName ? `Via ${route.viaName}` : route ? "OpenStreetMap road-network route" : "Road route unavailable"} · OSRM estimate
           </p>
           <div className="relative mt-3 h-[175px] overflow-hidden rounded-2xl border border-slate-100 shadow-sm">
             {camp ? (
@@ -370,9 +363,12 @@ export default async function TaskDetailPage(props: { params: Promise<{ id: stri
               </div>
             )}
             <span className="absolute right-2.5 top-2.5 rounded-full bg-emerald-500 px-2.5 py-1 text-[9.5px] font-bold text-white shadow-md">
-              {etaMin != null ? `${etaMin} min` : "Road Clear"}
+              {etaMin != null ? `${etaMin} min` : "ETA unavailable"}
             </span>
           </div>
+          <p className="mt-2 text-[10.5px] leading-relaxed text-slate-400">
+            Route distance and ETA do not verify live road closures or flood passability.
+          </p>
         </section>
 
         <section className="mt-6 px-5">

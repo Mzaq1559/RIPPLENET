@@ -7,8 +7,10 @@ import { fetchRainfall } from "@/lib/weather";
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const districtName = url.searchParams.get("district");
-  const lat = Number(url.searchParams.get("lat"));
-  const lng = Number(url.searchParams.get("lng"));
+  const rawLat = url.searchParams.get("lat");
+  const rawLng = url.searchParams.get("lng");
+  const lat = rawLat === null ? NaN : Number(rawLat);
+  const lng = rawLng === null ? NaN : Number(rawLng);
 
   let district =
     districtName ? findDistrict(districtName) : null;
@@ -16,7 +18,12 @@ export async function GET(req: NextRequest) {
   let point: { lat: number; lng: number };
   if (district) {
     point = { lat: district.lat, lng: district.lng };
-  } else if (Number.isFinite(lat) && Number.isFinite(lng)) {
+  } else if (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= -90 && lat <= 90 &&
+    lng >= -180 && lng <= 180
+  ) {
     point = { lat, lng };
     district = nearestDistrict(lat, lng);
   } else {

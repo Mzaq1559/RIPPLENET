@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { AuthGuard } from "../components/auth-guard";
 import { StaffNav } from "../components/staff-nav";
 import { NotificationBell } from "../components/notification-bell";
@@ -8,7 +8,7 @@ import { prisma } from "../../lib/db";
 import { getSession } from "../../lib/session";
 import { parseNeeds } from "../../lib/needs";
 import { assessRisk } from "../../lib/risk";
-import { mergeCamps, getNearbyDistricts, getMockRequestsForCamp } from "../../lib/camps";
+import { getNearbyDistricts } from "../../lib/camps";
 import { QueueList } from "./queue-list";
 
 export const dynamic = "force-dynamic";
@@ -41,52 +41,35 @@ export default async function QueuePage(props: {
   const searchParams = props.searchParams ? await props.searchParams : {};
   const qCampId = searchParams.campId ? Number(searchParams.campId) : null;
 
-  let dbCamps: any[] = [];
-  try {
-    dbCamps = await prisma.camp.findMany({
-      orderBy: [{ province: "asc" }, { name: "asc" }],
-    });
-  } catch (e) {
-    console.warn("Could not query camps:", e);
-  }
-
-  const allCamps = mergeCamps(dbCamps);
-  const effectiveCampId = qCampId || session.campId || allCamps[0]?.id || 101;
-  const currentCamp = allCamps.find((c) => c.id === effectiveCampId) || allCamps[0];
+  const allCamps = await prisma.camp.findMany({
+    orderBy: [{ province: "asc" }, { name: "asc" }],
+  });
+  const currentCamp =
+    allCamps.find((camp) => camp.id === (qCampId || session.campId)) ?? allCamps[0];
+  if (!currentCamp) notFound();
 
   const nearbyDistricts = getNearbyDistricts(currentCamp.district);
 
-  let requests: any[] = [];
-  try {
-    requests = await prisma.request.findMany({
-      where: {
-        OR: [
-          { campId: currentCamp.id },
-          { district: { in: nearbyDistricts } },
-        ],
-      },
-      orderBy: [{ createdAt: "desc" }],
-    });
-  } catch (e) {
-    console.warn("Could not query requests:", e);
-  }
-
-  // If no DB requests yet for this camp, use regional synthesized requests
-  if (requests.length === 0) {
-    requests = getMockRequestsForCamp(currentCamp);
-  }
+  const requests = await prisma.request.findMany({
+    where: {
+      OR: [
+        { campId: currentCamp.id },
+        { district: { in: nearbyDistricts } },
+      ],
+    },
+    orderBy: [{ createdAt: "desc" }],
+  });
 
   const items = sortQueueItems(requests.map((r) => {
     const needs = parseNeeds(r.needs);
     const risk = assessRisk({ priority: r.priority, type: r.type, peopleCount: r.peopleCount, needs });
-    const createdDate = r.createdAt instanceof Date ? r.createdAt : new Date(r.createdAt || Date.now());
     return {
       code: r.code,
       name: r.citizenName,
       location: r.location ?? `${r.district} District`,
       issues: needs.slice(0, 2).join(", ") || "Relief delivery",
       status: r.status,
-      createdAt: createdDate.toISOString(),
+      createdAt: r.createdAt.toISOString(),
       score: risk.score,
       level: risk.level,
       levelColor: risk.levelColor,
