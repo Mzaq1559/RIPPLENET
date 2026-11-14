@@ -5,12 +5,13 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "vercel-build": "prisma generate && prisma db push --accept-data-loss && node prisma/seed.js && next build",
+    "vercel-build": "prisma generate && prisma db push && next build",
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
     "db:seed": "node prisma/seed.js",
-    "db:reset": "prisma db push --accept-data-loss && node prisma/seed.js"
+    "db:reset": "prisma db push --accept-data-loss && node prisma/seed.js",
+    "db:push": "prisma db push"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
