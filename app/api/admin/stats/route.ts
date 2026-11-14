@@ -44,7 +44,11 @@ export async function GET() {
       province: d.province,
       ...computeFloodRisk(d.floodWeight, rainfalls[i]),
     }))
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => {
+      if (a.score === null) return b.score === null ? 0 : 1;
+      if (b.score === null) return -1;
+      return b.score - a.score;
+    });
 
   return Response.json({
     requests: {
